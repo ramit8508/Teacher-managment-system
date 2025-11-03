@@ -5,9 +5,13 @@ import Dashboard from './pages/Dashboard'
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+  };
+
   return (
     <>
-      {isLoggedIn ? <Dashboard /> : <Auth setIsLoggedIn={setIsLoggedIn} />}
+      {isLoggedIn ? <Dashboard onLogout={handleLogout} /> : <Auth setIsLoggedIn={setIsLoggedIn} />}
     </>
   )
 }

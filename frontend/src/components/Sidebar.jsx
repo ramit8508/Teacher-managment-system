@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const Sidebar = ({ onMenuChange }) => {
+const Sidebar = ({ onMenuChange, onLogout }) => {
   const [activeMenu, setActiveMenu] = useState('Dashboard');
 
   const menuItems = [
@@ -14,6 +14,14 @@ const Sidebar = ({ onMenuChange }) => {
   const handleMenuClick = (menuName) => {
     setActiveMenu(menuName);
     onMenuChange(menuName);
+  };
+
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to logout?')) {
+      if (onLogout) {
+        onLogout();
+      }
+    }
   };
 
   return (
@@ -56,8 +64,12 @@ const Sidebar = ({ onMenuChange }) => {
           <p>03/11/2025</p>
           <p className="text-blue-600 font-medium">Teacher: Demo Teacher</p>
         </div>
-        <button className="text-blue-600 text-sm font-medium hover:text-blue-700">
-          Logout
+        <button 
+          onClick={handleLogout}
+          className="w-full px-4 py-2 bg-red-50 text-red-600 rounded-md border border-red-200 text-sm font-medium hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+        >
+          <span>🚪</span>
+          <span>Logout</span>
         </button>
       </div>
     </div>

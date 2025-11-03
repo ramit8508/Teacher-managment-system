@@ -6,7 +6,7 @@ import Attendance from '../components/Attendance';
 import FeeDetails from '../components/FeeDetails';
 import ExaminationScores from '../components/ExaminationScores';
 
-const Dashboard = () => {
+const Dashboard = ({ onLogout }) => {
   const [currentPage, setCurrentPage] = useState('Dashboard');
 
   const renderContent = () => {
@@ -32,7 +32,7 @@ const Dashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      <Sidebar onMenuChange={setCurrentPage} />
+      <Sidebar onMenuChange={setCurrentPage} onLogout={onLogout} />
       <div className="flex-1">
         {renderContent()}
       </div>
