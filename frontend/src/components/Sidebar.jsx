@@ -2,6 +2,10 @@ import { useState } from 'react';
 
 const Sidebar = ({ onMenuChange, onLogout }) => {
   const [activeMenu, setActiveMenu] = useState('Dashboard');
+  
+  // Get current logged-in user
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const teacherName = currentUser.name || 'Demo Teacher';
 
   const menuItems = [
     { id: 1, name: 'Dashboard', icon: '🏠' },
@@ -62,7 +66,7 @@ const Sidebar = ({ onMenuChange, onLogout }) => {
         <div className="text-xs text-gray-600 mb-2">
           <p>Ready</p>
           <p>03/11/2025</p>
-          <p className="text-blue-600 font-medium">Teacher: Demo Teacher</p>
+          <p className="text-blue-600 font-medium">Teacher: {teacherName}</p>
         </div>
         <button 
           onClick={handleLogout}

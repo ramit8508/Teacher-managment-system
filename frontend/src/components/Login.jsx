@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const Login = ({ setIsLogin, setIsLoggedIn }) => {
+const Login = ({ setIsLogin, setIsLoggedIn, registeredUsers }) => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -20,9 +20,24 @@ const Login = ({ setIsLogin, setIsLoggedIn }) => {
     
     // Simulate API call with timeout
     setTimeout(() => {
-      console.log('Login data:', formData);
-      setIsLoading(false);
-      setIsLoggedIn(true);
+      // Get registered users from localStorage
+      const storedUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      
+      // Check if credentials match any registered user
+      const user = storedUsers.find(
+        (u) => u.username === formData.username && u.password === formData.password
+      );
+
+      if (user) {
+        // Store current logged-in user
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        alert(`Welcome back, ${user.name}!`);
+        setIsLoading(false);
+        setIsLoggedIn(true);
+      } else {
+        setIsLoading(false);
+        alert('Invalid username or password!\n\nPlease check your credentials or register if you don\'t have an account.');
+      }
     }, 1500);
   };
 
@@ -101,20 +116,16 @@ const Login = ({ setIsLogin, setIsLoggedIn }) => {
         </form>
       </div>
 
-      {/* Demo Credentials */}
-      <div className="bg-gray-50 px-6 py-4 border-t border-gray-300">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Demo Credentials</h3>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-gray-600 mb-1">Username:</p>
-            <p className="bg-white px-3 py-2 border border-gray-300 rounded text-gray-700">demo</p>
-          </div>
-          <div>
-            <p className="text-gray-600 mb-1">Password:</p>
-            <p className="bg-white px-3 py-2 border border-gray-300 rounded text-gray-700">demo</p>
-          </div>
+      {/* Info Footer */}
+      <div className="bg-blue-50 px-6 py-4 border-t border-blue-200">
+        <div className="text-center">
+          <p className="text-sm text-blue-700 font-medium">
+            ℹ️ Use your registered credentials to login
+          </p>
+          <p className="text-xs text-gray-600 mt-1">
+            Don't have an account? Click "Signup" tab above
+          </p>
         </div>
-        <p className="text-center text-xs text-gray-500 mt-3">Or try: mrs.johnson / teacher123</p>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const Signup = ({ setIsLogin }) => {
+const Signup = ({ setIsLogin, onSuccessfulSignup }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,12 +18,55 @@ const Signup = ({ setIsLogin }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match!');
       return;
     }
-    // Add your signup logic here
-    console.log('Signup data:', formData);
+
+    // Validate password length
+    if (formData.password.length < 6) {
+      alert('Password must be at least 6 characters long!');
+      return;
+    }
+
+    // Store user credentials
+    const userData = {
+      name: formData.name,
+      email: formData.email,
+      username: formData.username,
+      password: formData.password,
+    };
+
+    // Save to localStorage for persistence
+    const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+    
+    // Check if username already exists
+    if (existingUsers.some(user => user.username === userData.username)) {
+      alert('Username already exists! Please choose a different username.');
+      return;
+    }
+
+    // Check if email already exists
+    if (existingUsers.some(user => user.email === userData.email)) {
+      alert('Email already registered! Please use a different email.');
+      return;
+    }
+
+    existingUsers.push(userData);
+    localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
+
+    // Call parent callback
+    if (onSuccessfulSignup) {
+      onSuccessfulSignup(userData);
+    }
+
+    // Show success message
+    alert(`Registration successful! Welcome ${formData.name}!\n\nYou can now login with your credentials.`);
+    
+    // Switch to login page
+    setIsLogin(true);
   };
 
   return (
@@ -125,15 +168,13 @@ const Signup = ({ setIsLogin }) => {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600 text-sm">
-            Already have an account?{' '}
-            <button
-              onClick={() => setIsLogin(true)}
-              className="text-blue-600 font-medium hover:text-blue-700"
-            >
-              Sign In
-            </button>
+        {/* Info Footer */}
+        <div className="mt-6 text-center bg-green-50 p-4 rounded-md border border-green-200">
+          <p className="text-sm text-green-700 font-medium">
+            📝 Create your teacher profile to get started
+          </p>
+          <p className="text-xs text-gray-600 mt-1">
+            Already registered? Click "Login" tab above
           </p>
         </div>
       </div>
