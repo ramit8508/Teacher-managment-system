@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-const Sidebar = ({ onMenuChange, onLogout }) => {
+const Sidebar = ({ onMenuChange, onLogout, isOpen, setIsOpen }) => {
   const [activeMenu, setActiveMenu] = useState('Dashboard');
   const { user } = useAuth();
   
@@ -18,6 +18,10 @@ const Sidebar = ({ onMenuChange, onLogout }) => {
   const handleMenuClick = (menuName) => {
     setActiveMenu(menuName);
     onMenuChange(menuName);
+    // Close sidebar on mobile after selection
+    if (setIsOpen) {
+      setIsOpen(false);
+    }
   };
 
   const handleLogout = () => {
@@ -29,7 +33,29 @@ const Sidebar = ({ onMenuChange, onLogout }) => {
   };
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
+    <>
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setIsOpen && setIsOpen(false)}
+        ></div>
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Close button for mobile */}
+        <button
+          onClick={() => setIsOpen && setIsOpen(false)}
+          className="lg:hidden absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+        >
+          <span className="text-2xl">✕</span>
+        </button>
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
@@ -76,7 +102,8 @@ const Sidebar = ({ onMenuChange, onLogout }) => {
           <span>Logout</span>
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

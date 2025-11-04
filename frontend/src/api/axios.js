@@ -5,7 +5,14 @@ const getBaseURL = () => {
   // Check if VITE_API_URL is defined in environment variables
   const envApiUrl = import.meta.env.VITE_API_URL;
   
+  console.log('🔍 Environment Check:', {
+    VITE_API_URL: envApiUrl,
+    PROD: import.meta.env.PROD,
+    MODE: import.meta.env.MODE
+  });
+  
   if (envApiUrl) {
+    console.log('✅ Using VITE_API_URL:', envApiUrl);
     return envApiUrl;
   }
   
@@ -16,6 +23,7 @@ const getBaseURL = () => {
   }
   
   // For local development, use proxy
+  console.log('🏠 Using local proxy: /api/v1');
   return '/api/v1';
 };
 

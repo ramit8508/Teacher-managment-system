@@ -37,12 +37,12 @@ const Login = ({ setIsLogin }) => {
   return (
     <div className="bg-white rounded-lg shadow-md border border-gray-300 overflow-hidden">
       {/* Header */}
-      <div className="bg-gray-200 px-6 py-4 border-b border-gray-300">
+      <div className="bg-gray-200 px-4 sm:px-6 py-4 border-b border-gray-300">
         <h2 className="text-lg font-semibold text-gray-700">Teacher Login</h2>
       </div>
 
       {/* Form */}
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
             <p className="text-sm text-red-700">{error}</p>
@@ -115,7 +115,7 @@ const Login = ({ setIsLogin }) => {
       </div>
 
       {/* Info Footer */}
-      <div className="bg-blue-50 px-6 py-4 border-t border-blue-200">
+      <div className="bg-blue-50 px-4 sm:px-6 py-4 border-t border-blue-200">
         <div className="text-center">
           <p className="text-sm text-blue-700 font-medium">
             ℹ️ Use your registered credentials to login

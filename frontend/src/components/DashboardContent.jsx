@@ -106,11 +106,11 @@ const DashboardContent = ({ onMenuChange }) => {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
-        <p className="text-gray-600">Welcome back to the Teacher Management System</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-600">Welcome back to the Teacher Management System</p>
       </div>
 
       {loading ? (
@@ -123,48 +123,48 @@ const DashboardContent = ({ onMenuChange }) => {
       ) : (
         <>
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {statsDisplay.map((stat) => (
               <div
                 key={stat.id}
-                className="bg-white rounded-lg border border-gray-200 p-6 text-center hover:shadow-md transition-shadow"
+                className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 text-center hover:shadow-md transition-shadow"
               >
-                <div className={`text-4xl mb-3 ${stat.color}`}>{stat.icon}</div>
-                <div className="text-3xl font-bold text-gray-800 mb-1">{stat.number}</div>
-                <div className="text-sm text-gray-600">{stat.label}</div>
+                <div className={`text-3xl sm:text-4xl mb-2 sm:mb-3 ${stat.color}`}>{stat.icon}</div>
+                <div className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">{stat.number}</div>
+                <div className="text-xs sm:text-sm text-gray-600">{stat.label}</div>
               </div>
             ))}
           </div>
 
           {/* Recent Activities and Quick Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Recent Activities */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Recent Activities</h2>
-          <div className="space-y-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-4">Recent Activities</h2>
+          <div className="space-y-3 sm:space-y-4">
             {recentActivities.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3">
-                <span className={`text-sm font-semibold ${activity.color} min-w-[70px]`}>
+              <div key={activity.id} className="flex items-start gap-2 sm:gap-3">
+                <span className={`text-xs sm:text-sm font-semibold ${activity.color} min-w-[60px] sm:min-w-[70px]`}>
                   {activity.time}
                 </span>
-                <span className="text-sm text-gray-700">{activity.text}</span>
+                <span className="text-xs sm:text-sm text-gray-700">{activity.text}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Quick Actions</h2>
-          <div className="space-y-3">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-4">Quick Actions</h2>
+          <div className="space-y-2 sm:space-y-3">
             {quickActions.map((action) => (
               <button
                 key={action.id}
                 onClick={() => handleQuickAction(action.action)}
-                className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors text-left group"
+                className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors text-left group"
               >
-                <span className="text-xl">{action.icon}</span>
-                <span className="text-sm text-gray-700 group-hover:text-blue-700 font-medium">{action.text}</span>
+                <span className="text-lg sm:text-xl">{action.icon}</span>
+                <span className="text-xs sm:text-sm text-gray-700 group-hover:text-blue-700 font-medium">{action.text}</span>
                 <span className="ml-auto text-gray-400 group-hover:text-blue-500">→</span>
               </button>
             ))}
@@ -173,9 +173,9 @@ const DashboardContent = ({ onMenuChange }) => {
       </div>
 
       {/* System Information */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">System Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+        <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-4">System Information</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           <div>
             <p className="text-sm text-gray-600 mb-1">Logged in as:</p>
             <p className="text-sm text-gray-800 font-medium">{user?.fullName || 'Teacher'}</p>
