@@ -43,11 +43,38 @@ app.use("/api/v1/attendance", attendanceRoutes);
 app.use("/api/v1/examinations", examinationRoutes);
 app.use("/api/v1/fees", feeRoutes);
 
+// Root route
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Teacher Management System API",
+    version: "1.0.0",
+    endpoints: {
+      health: "/health",
+      users: "/api/v1/users",
+      classes: "/api/v1/classes",
+      attendance: "/api/v1/attendance",
+      examinations: "/api/v1/examinations",
+      fees: "/api/v1/fees"
+    }
+  });
+});
+
 // Health check route
 app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "Server is running"
+    message: "Server is running",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// 404 handler for undefined routes
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`
   });
 });
 

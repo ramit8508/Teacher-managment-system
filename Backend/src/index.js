@@ -17,10 +17,16 @@ connectDB()
       throw error;
     });
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`⚡️ Server is running at port: ${PORT}`);
-      console.log(`🌐 Server URL: http://localhost:${PORT}`);
-      console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
+      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`🏥 Health Check: /health`);
+      } else {
+        console.log(`🌐 Server URL: http://localhost:${PORT}`);
+        console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
+      }
     });
   })
   .catch((err) => {
