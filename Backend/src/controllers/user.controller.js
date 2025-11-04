@@ -19,7 +19,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, email, fullName, password, role, phone, address, classId } = req.body;
+  const { username, email, fullName, password, role, phone, address, classId, className } = req.body;
 
   // Validation
   if ([username, email, fullName, password].some((field) => field?.trim() === "")) {
@@ -35,6 +35,16 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User with email or username already exists");
   }
 
+  // Get createdBy from the logged-in user (if exists)
+  const createdBy = req.user?._id || null;
+  
+  // DEBUG: Log to see if req.user is being set
+  console.log('🔍 Register User Debug:');
+  console.log('  - req.user exists?', !!req.user);
+  console.log('  - req.user._id:', req.user?._id);
+  console.log('  - createdBy will be set to:', createdBy);
+  console.log('  - Student being added:', fullName);
+
   // Create user
   const user = await User.create({
     username: username.toLowerCase(),
@@ -44,7 +54,9 @@ const registerUser = asyncHandler(async (req, res) => {
     role: role || "teacher",
     phone: phone || "",
     address: address || "",
-    classId: classId || null
+    classId: classId || null,
+    className: className || "",
+    createdBy: createdBy
   });
 
   // Remove password and refreshToken from response
@@ -147,6 +159,13 @@ const getAllUsers = asyncHandler(async (req, res) => {
   
   let query = {};
   if (role) query.role = role;
+  
+  // If the logged-in user is a teacher (not admin), only show students they created
+  if (req.user && req.user.role === 'teacher' && role === 'student') {
+    query.createdBy = req.user._id;
+    console.log('🔒 Filtering students for teacher:', req.user.fullName, 'ID:', req.user._id);
+  }
+  
   if (search) {
     query.$or = [
       { fullName: { $regex: search, $options: 'i' } },
@@ -158,6 +177,8 @@ const getAllUsers = asyncHandler(async (req, res) => {
   const users = await User.find(query)
     .select("-password -refreshToken")
     .populate('classId', 'name subject teacher');
+  
+  console.log('📋 Students found:', users.length);
 
   return res.status(200).json(
     new ApiResponse(200, users, "Users fetched successfully")

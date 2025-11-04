@@ -4,6 +4,7 @@ import { examinationAPI, classAPI, authAPI } from '../api';
 const ExaminationScores = () => {
   const [examinations, setExaminations] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState('All Classes');
@@ -36,6 +37,10 @@ const ExaminationScores = () => {
       // Fetch all classes
       const classesRes = await classAPI.getAllClasses();
       setClasses(classesRes.data.data || []);
+      
+      // Fetch all students
+      const studentsRes = await authAPI.getAllUsers({ role: 'student' });
+      setStudents(studentsRes.data.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -91,7 +96,15 @@ const ExaminationScores = () => {
         remarks: examForm.remarks
       };
 
-      await examinationAPI.createExamination(examData);
+      // Check if it's an edit or create operation
+      if (examForm.id) {
+        await examinationAPI.updateExamination(examForm.id, examData);
+        alert('Examination record updated successfully!');
+      } else {
+        await examinationAPI.createExamination(examData);
+        alert('Examination record added successfully!');
+      }
+      
       setShowAddModal(false);
       setExamForm({
         studentId: '',
@@ -103,10 +116,37 @@ const ExaminationScores = () => {
       });
       setSubjects([{ subjectName: '', totalMarks: 100, obtainedMarks: '', remarks: '' }]);
       fetchData();
-      alert('Examination record added successfully!');
     } catch (error) {
-      console.error('Error adding examination:', error);
-      alert(error.response?.data?.message || 'Failed to add examination record.');
+      console.error('Error saving examination:', error);
+      alert(error.response?.data?.message || 'Failed to save examination record.');
+    }
+  };
+
+  const handleEdit = (exam) => {
+    // Populate the form with existing exam data
+    setExamForm({
+      id: exam._id,
+      studentId: exam.student?._id || '',
+      classId: exam.className || exam.class?._id || '',
+      examName: exam.examName,
+      examType: exam.examType,
+      examDate: new Date(exam.examDate).toISOString().split('T')[0],
+      remarks: exam.remarks || ''
+    });
+    setSubjects(exam.subjects || [{ subjectName: '', totalMarks: 100, obtainedMarks: '', remarks: '' }]);
+    setShowAddModal(true);
+  };
+
+  const handleDelete = async (examId) => {
+    if (window.confirm('Are you sure you want to delete this examination record?')) {
+      try {
+        await examinationAPI.deleteExamination(examId);
+        fetchData();
+        alert('Examination record deleted successfully!');
+      } catch (error) {
+        console.error('Error deleting examination:', error);
+        alert('Failed to delete examination record.');
+      }
     }
   };
 
@@ -135,9 +175,22 @@ const ExaminationScores = () => {
           className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
         >
           <option>All Classes</option>
-          {classes.map((cls) => (
-            <option key={cls._id} value={cls.name}>{cls.name}</option>
-          ))}
+          {/* Predefined class options: Class 1-10 with sections A-D */}
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+            ['A', 'B', 'C', 'D'].map(section => (
+              <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
+                Class {classNum} - Section {section}
+              </option>
+            ))
+          )}
+          {/* Also show database classes if any */}
+          {classes.length > 0 && (
+            <optgroup label="─── Database Classes ───">
+              {classes.map((cls) => (
+                <option key={cls._id} value={cls.name}>{cls.name}</option>
+              ))}
+            </optgroup>
+          )}
         </select>
       </div>
 
@@ -166,12 +219,13 @@ const ExaminationScores = () => {
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Grade</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredExams.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan="10" className="px-6 py-8 text-center text-gray-500">
                       No examination records found. Add a new record to get started.
                     </td>
                   </tr>
@@ -208,6 +262,22 @@ const ExaminationScores = () => {
                       <td className="px-6 py-4 text-sm text-gray-700">
                         {new Date(exam.examDate).toLocaleDateString()}
                       </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(exam)}
+                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-medium transition-colors"
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(exam._id)}
+                            className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm font-medium transition-colors"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -222,34 +292,77 @@ const ExaminationScores = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg border-2 border-blue-300 w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div className="bg-blue-100 px-6 py-4 border-b-2 border-blue-300">
-              <h2 className="text-xl font-bold text-blue-800">Add Examination Score</h2>
+              <h2 className="text-xl font-bold text-blue-800">
+                {examForm.id ? 'Edit Examination Score' : 'Add Examination Score'}
+              </h2>
             </div>
             <form onSubmit={handleSubmitExam} className="p-6 max-h-[80vh] overflow-y-auto">
               {/* Basic Info Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Student ID *</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Select Class *</label>
+                  <select
+                    name="classId"
+                    value={examForm.classId}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      setExamForm({...examForm, classId: e.target.value, studentId: ''});
+                    }}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
+                  >
+                    <option value="">-- Select Class First --</option>
+                    {/* Predefined class options: Class 1-10 with sections A-D */}
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+                      ['A', 'B', 'C', 'D'].map(section => (
+                        <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
+                          Class {classNum} - Section {section}
+                        </option>
+                      ))
+                    )}
+                    {/* Also show database classes if any */}
+                    {classes.length > 0 && (
+                      <optgroup label="─── Database Classes ───">
+                        {classes.map((cls) => (
+                          <option key={cls._id} value={cls._id}>
+                            {cls.name} - {cls.subject}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Select class first, then student</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Select Student *</label>
+                  <select
                     name="studentId"
                     value={examForm.studentId}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
-                    placeholder="Enter student ID"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Class ID *</label>
-                  <input
-                    type="text"
-                    name="classId"
-                    value={examForm.classId}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
-                    placeholder="Enter class ID"
-                  />
+                    disabled={!examForm.classId}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">-- Select Student --</option>
+                    {students
+                      .filter(student => {
+                        // Check if classId is a predefined class or database class
+                        const isPredefinedClass = examForm.classId.startsWith('Class ');
+                        if (isPredefinedClass) {
+                          return student.className === examForm.classId;
+                        } else {
+                          return student.classId?._id === examForm.classId;
+                        }
+                      })
+                      .map((student) => (
+                        <option key={student._id} value={student._id}>
+                          {student.fullName} ({student.email})
+                        </option>
+                      ))}
+                  </select>
+                  {!examForm.classId && (
+                    <p className="text-xs text-orange-600 mt-1">Please select a class first</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Name *</label>

@@ -9,11 +9,12 @@ import {
   updateUser,
   deleteUser
 } from "../controllers/user.controller.js";
-import { verifyJWT, verifyRole } from "../middlewares/auth.middleware.js";
+import { verifyJWT, verifyRole, optionalJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.route("/register").post(registerUser);
+// Register route with optional JWT - allows both initial registration and adding students after login
+router.route("/register").post(optionalJWT, registerUser);
 router.route("/login").post(loginUser);
 
 // Secured routes

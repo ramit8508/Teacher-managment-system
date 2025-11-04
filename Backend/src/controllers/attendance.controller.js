@@ -4,30 +4,45 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Attendance } from "../models/attendance.model.js";
 
 const markAttendance = asyncHandler(async (req, res) => {
-  const { student, classId, date, status, remarks } = req.body;
+  const { student, classId, className, date, status, remarks } = req.body;
 
-  if (!student || !classId || !status) {
+  if (!student || (!classId && !className) || !status) {
     throw new ApiError(400, "Student, class, and status are required");
   }
 
   // Check if attendance already exists for this date
-  const existingAttendance = await Attendance.findOne({
+  const query = {
     student,
-    class: classId,
     date: new Date(date).setHours(0, 0, 0, 0)
-  });
+  };
+  
+  if (classId) {
+    query.class = classId;
+  } else if (className) {
+    query.className = className;
+  }
+
+  const existingAttendance = await Attendance.findOne(query);
 
   if (existingAttendance) {
     throw new ApiError(400, "Attendance already marked for this date");
   }
 
-  const attendance = await Attendance.create({
+  const attendanceData = {
     student,
-    class: classId,
     date: date || Date.now(),
     status,
     remarks
-  });
+  };
+  
+  if (classId) {
+    attendanceData.class = classId;
+  }
+  if (className) {
+    attendanceData.className = className;
+  }
+
+  const attendance = await Attendance.create(attendanceData);
 
   return res.status(201).json(
     new ApiResponse(201, attendance, "Attendance marked successfully")
@@ -38,18 +53,26 @@ const getAttendanceByClass = asyncHandler(async (req, res) => {
   const { classId } = req.params;
   const { startDate, endDate } = req.query;
 
-  const query = { class: classId };
+  // Check if classId is a predefined class name or ObjectId
+  const isPredefinedClass = classId.startsWith('Class ');
+  
+  const query = isPredefinedClass ? { className: classId } : { class: classId };
 
   if (startDate && endDate) {
     query.date = {
       $gte: new Date(startDate),
       $lte: new Date(endDate)
     };
+  } else if (startDate) {
+    query.date = { $gte: new Date(startDate) };
+  } else if (endDate) {
+    query.date = { $lte: new Date(endDate) };
   }
 
   const attendance = await Attendance.find(query)
     .populate("student", "fullName email")
-    .populate("class", "className section");
+    .populate("class", "className section")
+    .sort({ date: -1 });
 
   return res.status(200).json(
     new ApiResponse(200, attendance, "Attendance fetched successfully")

@@ -26,15 +26,26 @@ const createExamination = asyncHandler(async (req, res) => {
     }
   }
 
-  const examination = await Examination.create({
+  // Check if classId is a predefined class (string) or database class (ObjectId)
+  const isPredefinedClass = classId.startsWith('Class ');
+  
+  const examinationData = {
     student,
-    class: classId,
     examName,
     examType: examType || "Unit Test",
     subjects,
     examDate: examDate || Date.now(),
     remarks
-  });
+  };
+  
+  // Set class or className based on type
+  if (isPredefinedClass) {
+    examinationData.className = classId;
+  } else {
+    examinationData.class = classId;
+  }
+
+  const examination = await Examination.create(examinationData);
 
   // Populate student and class details
   await examination.populate([

@@ -46,6 +46,15 @@ const userSchema = new Schema(
       ref: "Class",
       default: null
     },
+    className: {
+      type: String,
+      default: ""
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
     avatar: {
       type: String, // URL to avatar image
       default: ""

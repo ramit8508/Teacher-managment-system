@@ -9,8 +9,11 @@ const attendanceSchema = new Schema(
     },
     class: {
       type: Schema.Types.ObjectId,
-      ref: "Class",
-      required: true
+      ref: "Class"
+    },
+    className: {
+      type: String,
+      default: ""
     },
     date: {
       type: Date,

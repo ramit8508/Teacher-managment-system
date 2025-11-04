@@ -4,18 +4,38 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Fee } from "../models/fee.model.js";
 
 const createFeeRecord = asyncHandler(async (req, res) => {
-  const { student, academicYear, totalFee, dueDate } = req.body;
+  const { studentId, student, academicYear, totalFee, amount, dueDate, feeType, status, classId, className, remarks } = req.body;
 
-  if (!student || !academicYear || !totalFee || !dueDate) {
-    throw new ApiError(400, "All fields are required");
+  // Support both old format (student, academicYear, totalFee) and new format (studentId, amount, feeType)
+  const studentField = studentId || student;
+  const feeAmount = amount || totalFee;
+  const academicYearField = academicYear || new Date().getFullYear().toString();
+
+  if (!studentField || !feeAmount || !dueDate) {
+    throw new ApiError(400, "Student, amount, and due date are required");
   }
 
-  const fee = await Fee.create({
-    student,
-    academicYear,
-    totalFee,
-    dueDate
-  });
+  // Determine if using predefined class or database class
+  const isPredefinedClass = classId && classId.startsWith('Class ');
+
+  const feeData = {
+    student: studentField,
+    academicYear: academicYearField,
+    totalFee: feeAmount,
+    dueDate,
+    status: status || 'pending',
+    feeType: feeType || 'Tuition Fee',
+    remarks: remarks || ''
+  };
+
+  // Add class information based on type
+  if (isPredefinedClass) {
+    feeData.className = classId;
+  } else if (classId) {
+    feeData.classId = classId;
+  }
+
+  const fee = await Fee.create(feeData);
 
   return res.status(201).json(
     new ApiResponse(201, fee, "Fee record created successfully")
@@ -40,7 +60,8 @@ const getAllFees = asyncHandler(async (req, res) => {
   const query = status ? { status } : {};
 
   const fees = await Fee.find(query)
-    .populate("student", "fullName email")
+    .populate("student", "fullName email className")
+    .populate("classId", "name")
     .sort({ createdAt: -1 });
 
   return res.status(200).json(
@@ -79,17 +100,40 @@ const recordPayment = asyncHandler(async (req, res) => {
 
 const updateFeeRecord = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { totalFee, dueDate } = req.body;
+  const { totalFee, dueDate, status, paidDate, ...otherFields } = req.body;
 
-  const fee = await Fee.findByIdAndUpdate(
-    id,
-    { totalFee, dueDate },
-    { new: true, runValidators: true }
-  );
-
+  const fee = await Fee.findById(id);
+  
   if (!fee) {
     throw new ApiError(404, "Fee record not found");
   }
+
+  // If marking as paid, set paidAmount to totalFee
+  if (status === 'paid' && fee.status !== 'paid') {
+    fee.paidAmount = fee.totalFee;
+    fee.status = 'paid';
+    if (paidDate) {
+      fee.paymentHistory.push({
+        amount: fee.totalFee - (fee.paidAmount || 0),
+        paymentDate: paidDate,
+        paymentMethod: 'Manual',
+        transactionId: 'MANUAL_' + Date.now()
+      });
+    }
+  }
+
+  // Update other fields if provided
+  if (totalFee !== undefined) fee.totalFee = totalFee;
+  if (dueDate !== undefined) fee.dueDate = dueDate;
+  
+  // Update any other fields from request
+  Object.keys(otherFields).forEach(key => {
+    if (otherFields[key] !== undefined) {
+      fee[key] = otherFields[key];
+    }
+  });
+
+  await fee.save();
 
   return res.status(200).json(
     new ApiResponse(200, fee, "Fee record updated successfully")

@@ -44,7 +44,11 @@ const examinationSchema = new Schema(
     class: {
       type: Schema.Types.ObjectId,
       ref: "Class",
-      required: true
+      required: false  // Made optional to support predefined classes
+    },
+    className: {
+      type: String,
+      trim: true  // For predefined classes like "Class 1 - Section A"
     },
     examName: {
       type: String,

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { feeAPI, classAPI } from '../api';
+import { feeAPI, classAPI, authAPI } from '../api';
 
 const FeeDetails = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [feeRecords, setFeeRecords] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [students, setStudents] = useState([]);
   const [selectedClass, setSelectedClass] = useState('All Classes');
   const [selectedFeeType, setSelectedFeeType] = useState('All Fee Types');
   
@@ -43,10 +44,14 @@ const FeeDetails = () => {
       const classesRes = await classAPI.getAllClasses();
       setClasses(classesRes.data.data || []);
       
+      // Fetch all students
+      const studentsRes = await authAPI.getAllUsers({ role: 'student' });
+      setStudents(studentsRes.data.data || []);
+      
       // Calculate stats
-      const paid = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
-      const pending = fees.filter(f => f.status === 'pending').reduce((sum, f) => sum + f.amount, 0);
-      const overdue = fees.filter(f => f.status === 'overdue').reduce((sum, f) => sum + f.amount, 0);
+      const paid = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + (f.totalFee || f.amount || 0), 0);
+      const pending = fees.filter(f => f.status === 'pending').reduce((sum, f) => sum + (f.totalFee || f.amount || 0), 0);
+      const overdue = fees.filter(f => f.status === 'overdue').reduce((sum, f) => sum + (f.totalFee || f.amount || 0), 0);
       
       setStats({
         totalCollected: paid,
@@ -64,8 +69,15 @@ const FeeDetails = () => {
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     try {
-      await feeAPI.createFee(paymentForm);
-      alert('Payment recorded successfully!');
+      // Check if it's an edit or create operation
+      if (paymentForm.id) {
+        await feeAPI.updateFee(paymentForm.id, paymentForm);
+        alert('Payment updated successfully!');
+      } else {
+        await feeAPI.createFee(paymentForm);
+        alert('Payment recorded successfully!');
+      }
+      
       setShowPaymentModal(false);
       setPaymentForm({
         studentId: '',
@@ -78,8 +90,8 @@ const FeeDetails = () => {
       });
       fetchData(); // Refresh data
     } catch (error) {
-      console.error('Error recording payment:', error);
-      alert('Failed to record payment. Please try again.');
+      console.error('Error saving payment:', error);
+      alert('Failed to save payment. Please try again.');
     }
   };
 
@@ -94,6 +106,34 @@ const FeeDetails = () => {
     } catch (error) {
       console.error('Error updating fee:', error);
       alert('Failed to update fee status.');
+    }
+  };
+
+  const handleEdit = (record) => {
+    // Populate the form with existing fee data
+    setPaymentForm({
+      id: record._id,
+      studentId: record.studentId?._id || record.student?._id || '',
+      classId: record.classId?._id || record.className || '',
+      amount: record.amount || record.totalFee || '',
+      feeType: record.feeType || 'Tuition Fee',
+      dueDate: record.dueDate ? new Date(record.dueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      status: record.status || 'pending',
+      remarks: record.remarks || ''
+    });
+    setShowPaymentModal(true);
+  };
+
+  const handleDelete = async (feeId) => {
+    if (window.confirm('Are you sure you want to delete this fee record?')) {
+      try {
+        await feeAPI.deleteFee(feeId);
+        fetchData();
+        alert('Fee record deleted successfully!');
+      } catch (error) {
+        console.error('Error deleting fee:', error);
+        alert('Failed to delete fee record.');
+      }
     }
   };
 
@@ -154,9 +194,22 @@ const FeeDetails = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                 >
                   <option>All Classes</option>
-                  {classes.map((cls) => (
-                    <option key={cls._id} value={cls.name}>{cls.name}</option>
-                  ))}
+                  {/* Predefined class options: Class 1-10 with sections A-D */}
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+                    ['A', 'B', 'C', 'D'].map(section => (
+                      <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
+                        Class {classNum} - Section {section}
+                      </option>
+                    ))
+                  )}
+                  {/* Also show database classes if any */}
+                  {classes.length > 0 && (
+                    <optgroup label="─── Database Classes ───">
+                      {classes.map((cls) => (
+                        <option key={cls._id} value={cls.name}>{cls.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               <div>
@@ -183,31 +236,71 @@ const FeeDetails = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg border-2 border-blue-300 w-full max-w-3xl">
             <div className="bg-blue-100 px-6 py-4 border-b-2 border-blue-300">
-              <h2 className="text-xl font-bold text-blue-800">Record New Payment</h2>
+              <h2 className="text-xl font-bold text-blue-800">
+                {paymentForm.id ? 'Edit Payment Record' : 'Record New Payment'}
+              </h2>
             </div>
             <form onSubmit={handlePaymentSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Student ID</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Select Class *</label>
+                  <select 
                     required 
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" 
-                    placeholder="Enter Student ID" 
-                    value={paymentForm.studentId} 
-                    onChange={(e) => setPaymentForm({...paymentForm, studentId: e.target.value})} 
-                  />
+                    value={paymentForm.classId} 
+                    onChange={(e) => setPaymentForm({...paymentForm, classId: e.target.value, studentId: ''})}
+                  >
+                    <option value="">-- Select Class First --</option>
+                    {/* Predefined class options: Class 1-10 with sections A-D */}
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+                      ['A', 'B', 'C', 'D'].map(section => (
+                        <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
+                          Class {classNum} - Section {section}
+                        </option>
+                      ))
+                    )}
+                    {/* Also show database classes if any */}
+                    {classes.length > 0 && (
+                      <optgroup label="─── Database Classes ───">
+                        {classes.map((cls) => (
+                          <option key={cls._id} value={cls._id}>
+                            {cls.name} - {cls.subject}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Select class first, then student</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Class ID</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Select Student *</label>
+                  <select 
                     required 
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" 
-                    placeholder="Enter Class ID" 
-                    value={paymentForm.classId} 
-                    onChange={(e) => setPaymentForm({...paymentForm, classId: e.target.value})} 
-                  />
+                    value={paymentForm.studentId} 
+                    onChange={(e) => setPaymentForm({...paymentForm, studentId: e.target.value})}
+                    disabled={!paymentForm.classId}
+                  >
+                    <option value="">-- Select Student --</option>
+                    {students
+                      .filter(student => {
+                        // Check if classId is a predefined class or database class
+                        const isPredefinedClass = paymentForm.classId.startsWith('Class ');
+                        if (isPredefinedClass) {
+                          return student.className === paymentForm.classId;
+                        } else {
+                          return student.classId?._id === paymentForm.classId;
+                        }
+                      })
+                      .map((student) => (
+                        <option key={student._id} value={student._id}>
+                          {student.fullName} ({student.email})
+                        </option>
+                      ))}
+                  </select>
+                  {!paymentForm.classId && (
+                    <p className="text-xs text-orange-600 mt-1">Please select a class first</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Amount</label>
@@ -307,12 +400,12 @@ const FeeDetails = () => {
                 ) : (
                   filteredRecords.map((record) => (
                     <tr key={record._id} className="border-b border-gray-200 hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-700">{record.studentId?.fullName || 'N/A'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{record.classId?.name || 'N/A'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{record.feeType}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">₹{record.amount.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{record.student?.fullName || 'N/A'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{record.className || record.classId?.name || 'N/A'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{record.feeType || 'N/A'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">₹{(record.totalFee || record.amount || 0).toLocaleString()}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">
-                        {new Date(record.dueDate).toLocaleDateString()}
+                        {record.dueDate ? new Date(record.dueDate).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-700">
                         {record.paidDate ? new Date(record.paidDate).toLocaleDateString() : '-'}
@@ -323,18 +416,32 @@ const FeeDetails = () => {
                           record.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                           'bg-red-100 text-red-700'
                         }`}>
-                          {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                          {record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : 'N/A'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        {record.status !== 'paid' && (
+                        <div className="flex gap-2">
+                          {record.status !== 'paid' && (
+                            <button 
+                              onClick={() => handleMarkPaid(record._id)} 
+                              className="px-3 py-1 bg-green-100 text-green-700 rounded text-sm font-medium hover:bg-green-200 transition-colors"
+                            >
+                              ✓ Mark Paid
+                            </button>
+                          )}
                           <button 
-                            onClick={() => handleMarkPaid(record._id)} 
-                            className="px-4 py-1 bg-green-100 text-green-700 rounded border border-green-300 text-sm font-medium hover:bg-green-200 transition-colors"
+                            onClick={() => handleEdit(record)} 
+                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium hover:bg-blue-200 transition-colors"
                           >
-                            Mark Paid
+                            ✏️ Edit
                           </button>
-                        )}
+                          <button 
+                            onClick={() => handleDelete(record._id)} 
+                            className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm font-medium hover:bg-red-200 transition-colors"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

@@ -8,6 +8,11 @@ const Attendance = () => {
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState({});
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyClass, setHistoryClass] = useState('');
+  const [historyDate, setHistoryDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     fetchClasses();
@@ -34,28 +39,44 @@ const Attendance = () => {
     try {
       setLoading(true);
       
-      // Get class details with populated students
-      const classResponse = await classAPI.getClassById(selectedClass);
-      const classData = classResponse.data.data;
+      // Fetch all students
+      const studentsResponse = await authAPI.getAllUsers({ role: 'student' });
+      const allStudents = studentsResponse.data.data || [];
       
-      if (!classData.students || classData.students.length === 0) {
-        alert(`No students enrolled in ${classData.name}`);
+      // Check if selectedClass is a predefined class (string) or database class (ObjectId)
+      const isPredefinedClass = selectedClass.startsWith('Class ');
+      
+      // Filter students based on selected class
+      let filteredStudents;
+      if (isPredefinedClass) {
+        // Filter by className for predefined classes
+        filteredStudents = allStudents.filter(student => student.className === selectedClass);
+      } else {
+        // Filter by classId for database classes
+        filteredStudents = allStudents.filter(student => student.classId?._id === selectedClass);
+      }
+      
+      if (filteredStudents.length === 0) {
+        alert(`No students enrolled in ${selectedClass}`);
         setStudents([]);
         return;
       }
       
       // Fetch attendance records for today
       try {
-        const attendanceResponse = await attendanceAPI.getAllAttendance({
-          classId: selectedClass,
-          date: selectedDate
-        });
+        const attendanceResponse = await attendanceAPI.getAttendanceByClass(selectedClass);
         const todayAttendance = attendanceResponse.data.data || [];
+        
+        // Filter by selected date
+        const filteredAttendance = todayAttendance.filter(record => {
+          const recordDate = new Date(record.date).toISOString().split('T')[0];
+          return recordDate === selectedDate;
+        });
         
         // Create a map of student attendance status
         const attendanceMap = {};
-        todayAttendance.forEach(record => {
-          attendanceMap[record.studentId._id || record.studentId] = record.status === 'present';
+        filteredAttendance.forEach(record => {
+          attendanceMap[record.student._id || record.student] = record.status === 'present';
         });
         
         setAttendanceRecords(attendanceMap);
@@ -64,7 +85,7 @@ const Attendance = () => {
         setAttendanceRecords({});
       }
       
-      setStudents(classData.students);
+      setStudents(filteredStudents);
     } catch (error) {
       console.error('Error loading students:', error);
       alert('Failed to load students. Please try again.');
@@ -105,13 +126,26 @@ const Attendance = () => {
     try {
       setLoading(true);
       
+      // Determine if it's a predefined class or database class
+      const isPredefinedClass = selectedClass.startsWith('Class ');
+      
       // Create attendance records for each student
-      const attendanceData = students.map(student => ({
-        studentId: student._id,
-        classId: selectedClass,
-        date: selectedDate,
-        status: attendanceRecords[student._id] ? 'present' : 'absent'
-      }));
+      const attendanceData = students.map(student => {
+        const data = {
+          student: student._id,
+          date: selectedDate,
+          status: attendanceRecords[student._id] ? 'present' : 'absent'
+        };
+        
+        // Add classId or className based on type
+        if (isPredefinedClass) {
+          data.className = selectedClass;
+        } else {
+          data.classId = selectedClass;
+        }
+        
+        return data;
+      });
 
       // Save each attendance record
       await Promise.all(
@@ -130,10 +164,211 @@ const Attendance = () => {
   const presentCount = students.filter(s => attendanceRecords[s._id]).length;
   const absentCount = students.length - presentCount;
 
+  const handleViewHistory = async () => {
+    if (!historyClass) {
+      alert('Please select a class to view history!');
+      return;
+    }
+
+    try {
+      setHistoryLoading(true);
+      
+      console.log('Fetching history for class:', historyClass, 'date:', historyDate);
+      
+      // Fetch attendance records for the selected class
+      const response = await attendanceAPI.getAttendanceByClass(historyClass);
+      const records = response.data.data || [];
+      
+      console.log('Fetched records:', records);
+      
+      // Filter by selected date if provided
+      const filteredRecords = historyDate 
+        ? records.filter(record => {
+            const recordDate = new Date(record.date).toISOString().split('T')[0];
+            console.log('Comparing:', recordDate, '===', historyDate);
+            return recordDate === historyDate;
+          })
+        : records;
+      
+      console.log('Filtered records:', filteredRecords);
+      
+      if (filteredRecords.length === 0) {
+        alert(`No attendance records found for ${historyClass} on ${historyDate}!`);
+        setHistoryData([]);
+        setHistoryLoading(false);
+        return;
+      }
+      
+      // Group records by date
+      const groupedByDate = filteredRecords.reduce((acc, record) => {
+        const date = new Date(record.date).toLocaleDateString();
+        if (!acc[date]) {
+          acc[date] = [];
+        }
+        acc[date].push(record);
+        return acc;
+      }, {});
+      
+      // Convert to array and sort by date (newest first)
+      const historyArray = Object.keys(groupedByDate).map(date => ({
+        date,
+        records: groupedByDate[date],
+        totalStudents: groupedByDate[date].length,
+        present: groupedByDate[date].filter(r => r.status === 'present').length,
+        absent: groupedByDate[date].filter(r => r.status === 'absent').length
+      })).sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      setHistoryData(historyArray);
+    } catch (error) {
+      console.error('Error fetching attendance history:', error);
+      alert('Failed to fetch attendance history. Please try again.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Attendance Management</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Attendance Management</h1>
+        <button 
+          onClick={() => setShowHistory(!showHistory)}
+          className="px-6 py-2 bg-purple-100 text-purple-700 rounded-lg border border-purple-300 font-medium hover:bg-purple-200 transition-colors flex items-center gap-2"
+        >
+          <span>📜</span>
+          <span>{showHistory ? 'Mark Attendance' : 'View History'}</span>
+        </button>
+      </div>
       
+      {/* Attendance History Section */}
+      {showHistory ? (
+        <div>
+          {/* History Filter Section */}
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-2 border-purple-300 p-6 mb-6 shadow-md">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">📜</span>
+              <h2 className="text-xl font-bold text-purple-800">Attendance History</h2>
+            </div>
+            <p className="text-sm text-gray-700 mb-4">View previous attendance records by class and date</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">🎓 Select Class <span className="text-red-500">*</span></label>
+                <select 
+                  value={historyClass} 
+                  onChange={(e) => setHistoryClass(e.target.value)} 
+                  className="w-full px-4 py-2 border-2 border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-white"
+                >
+                  <option value="">-- Select Class --</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+                    ['A', 'B', 'C', 'D'].map(section => (
+                      <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
+                        Class {classNum} - Section {section}
+                      </option>
+                    ))
+                  )}
+                  {classes.length > 0 && (
+                    <optgroup label="─── Database Classes ───">
+                      {classes.map((cls) => (
+                        <option key={cls._id} value={cls._id}>{cls.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">📅 Select Date <span className="text-red-500">*</span></label>
+                <input 
+                  type="date" 
+                  value={historyDate} 
+                  onChange={(e) => setHistoryDate(e.target.value)} 
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" 
+                />
+              </div>
+              <div className="flex items-end">
+                <button 
+                  onClick={handleViewHistory}
+                  disabled={!historyClass || !historyDate || historyLoading}
+                  className={`w-full px-6 py-2 rounded-md font-semibold transition-all flex items-center justify-center gap-2 ${
+                    historyClass && historyDate && !historyLoading
+                      ? 'bg-purple-500 text-white hover:bg-purple-600 border-2 border-purple-600 shadow-md hover:shadow-lg' 
+                      : 'bg-gray-200 text-gray-500 border-2 border-gray-300 cursor-not-allowed'
+                  }`}
+                >
+                  <span>🔍</span>
+                  <span>{historyLoading ? 'Loading...' : 'View Records'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* History Results */}
+          {historyLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading attendance history...</p>
+              </div>
+            </div>
+          ) : historyData.length > 0 ? (
+            <div className="space-y-4">
+              {historyData.map((dayRecord, index) => (
+                <div key={index} className="bg-white rounded-lg border border-gray-300 overflow-hidden">
+                  <div className="bg-gradient-to-r from-purple-100 to-pink-100 px-6 py-3 border-b border-gray-300">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-bold text-gray-800">📅 {dayRecord.date}</h3>
+                      <div className="flex gap-4 text-sm">
+                        <span className="text-green-700 font-semibold">✅ Present: {dayRecord.present}</span>
+                        <span className="text-red-700 font-semibold">❌ Absent: {dayRecord.absent}</span>
+                        <span className="text-blue-700 font-semibold">👥 Total: {dayRecord.totalStudents}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Student Name</th>
+                          <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                          <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                          <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Marked At</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dayRecord.records.map((record) => (
+                          <tr key={record._id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <td className="px-6 py-4 text-sm text-gray-700">{record.student?.fullName || 'N/A'}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">{record.student?.email || 'N/A'}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                record.status === 'present' 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-red-100 text-red-700'
+                              }`}>
+                                {record.status === 'present' ? '✅ Present' : '❌ Absent'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700">
+                              {new Date(record.createdAt).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+              <div className="text-6xl mb-4">📜</div>
+              <h3 className="text-xl font-bold text-gray-700 mb-2">No History Found</h3>
+              <p className="text-gray-600">Select a class and click "View Records" to see attendance history</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
       {/* Important: Class Selection Section */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-300 p-6 mb-6 shadow-md">
         <div className="flex items-center gap-2 mb-4">
@@ -162,9 +397,22 @@ const Attendance = () => {
               disabled={loading}
             >
               <option value="">-- Select Class --</option>
-              {classes.map((cls) => (
-                <option key={cls._id} value={cls._id}>{cls.name}</option>
-              ))}
+              {/* Predefined class options: Class 1-10 with sections A-D */}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+                ['A', 'B', 'C', 'D'].map(section => (
+                  <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
+                    Class {classNum} - Section {section}
+                  </option>
+                ))
+              )}
+              {/* Also show database classes if any */}
+              {classes.length > 0 && (
+                <optgroup label="─── Database Classes ───">
+                  {classes.map((cls) => (
+                    <option key={cls._id} value={cls._id}>{cls.name}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
           <div className="flex items-end">
@@ -283,6 +531,8 @@ const Attendance = () => {
           <h3 className="text-xl font-bold text-gray-700 mb-2">No Class Selected</h3>
           <p className="text-gray-600">Please select a class and click "Load Students" to begin marking attendance</p>
         </div>
+      )}
+        </>
       )}
     </div>
   );

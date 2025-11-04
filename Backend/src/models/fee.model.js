@@ -15,6 +15,22 @@ const feeSchema = new Schema(
       type: Number,
       required: true
     },
+    // Additional fields for compatibility with frontend
+    feeType: {
+      type: String,
+      enum: ["Tuition Fee", "Library Fee", "Lab Fee", "Transport Fee", "Exam Fee", "Other"],
+      default: "Tuition Fee"
+    },
+    classId: {
+      type: Schema.Types.ObjectId,
+      ref: "Class"
+    },
+    className: {
+      type: String  // For predefined classes like "Class 1 - Section A"
+    },
+    remarks: {
+      type: String
+    },
     paidAmount: {
       type: Number,
       default: 0

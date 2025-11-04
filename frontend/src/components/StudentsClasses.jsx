@@ -27,7 +27,8 @@ const StudentsClasses = () => {
     role: 'student',
     phone: '',
     address: '',
-    classId: ''
+    classId: '',
+    className: ''
   });
 
   const [stats, setStats] = useState({
@@ -78,10 +79,23 @@ const StudentsClasses = () => {
   };
 
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    
+    // If changing class, handle both classId and className
+    if (name === 'classId') {
+      // Check if it's a predefined class (string) or database class (ObjectId)
+      const isPredefinedClass = value.startsWith('Class ');
+      setFormData({
+        ...formData,
+        classId: isPredefinedClass ? '' : value, // Set empty if predefined
+        className: isPredefinedClass ? value : '' // Set className if predefined
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
   const handleAddStudent = async (e) => {
@@ -97,6 +111,8 @@ const StudentsClasses = () => {
         password: 'Student@123' // Default password for all students
       };
       
+      console.log('Sending student data:', studentData); // Debug log
+      
       await authAPI.register(studentData);
       setShowAddModal(false);
       setFormData({
@@ -105,7 +121,8 @@ const StudentsClasses = () => {
         role: 'student',
         phone: '',
         address: '',
-        classId: ''
+        classId: '',
+        className: ''
       });
       // Refresh data after adding student
       fetchData();
@@ -264,8 +281,8 @@ const StudentsClasses = () => {
   const filteredStudents = selectedClass === 'All Classes'
     ? students
     : students.filter(student => {
-        // Filter by class if student has classId populated
-        return student.classId?.name === selectedClass;
+        // Filter by class if student has classId populated or className
+        return student.classId?.name === selectedClass || student.className === selectedClass;
       });
 
   return (
@@ -330,9 +347,22 @@ const StudentsClasses = () => {
                 className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
               >
                 <option>All Classes</option>
-                {classes.map((cls) => (
-                  <option key={cls._id} value={cls.name}>{cls.name}</option>
-                ))}
+                {/* Predefined class options: Class 1-10 with sections A-D */}
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+                  ['A', 'B', 'C', 'D'].map(section => (
+                    <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
+                      Class {classNum} - Section {section}
+                    </option>
+                  ))
+                )}
+                {/* Also show database classes if any */}
+                {classes.length > 0 && (
+                  <optgroup label="─── Database Classes ───">
+                    {classes.map((cls) => (
+                      <option key={cls._id} value={cls.name}>{cls.name}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
             {isTeacherOrAdmin && (
@@ -527,16 +557,29 @@ const StudentsClasses = () => {
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Class</label>
                   <select
                     name="classId"
-                    value={formData.classId}
+                    value={formData.classId || formData.className}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
                   >
                     <option value="">Select Class (Optional)</option>
-                    {classes.map((cls) => (
-                      <option key={cls._id} value={cls._id}>
-                        {cls.name} - {cls.subject}
-                      </option>
-                    ))}
+                    {/* Predefined class options: Class 1-10 with sections A-D */}
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+                      ['A', 'B', 'C', 'D'].map(section => (
+                        <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
+                          Class {classNum} - Section {section}
+                        </option>
+                      ))
+                    )}
+                    {/* Also show database classes if any */}
+                    {classes.length > 0 && (
+                      <optgroup label="─────────────────">
+                        {classes.map((cls) => (
+                          <option key={cls._id} value={cls._id}>
+                            {cls.name} - {cls.subject}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 </div>
                 <div className="md:col-span-2">
@@ -614,7 +657,7 @@ const StudentsClasses = () => {
                       <td className="px-6 py-4 text-sm text-gray-700">{student.fullName}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{student.email}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{student.phone || 'N/A'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{student.classId?.name || 'Not Assigned'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{student.classId?.name || student.className || 'Not Assigned'}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{student.address || 'N/A'}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">
                         {new Date(student.createdAt).toLocaleDateString()}
