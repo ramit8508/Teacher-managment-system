@@ -1,34 +1,107 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { feeAPI, classAPI } from '../api';
 
 const FeeDetails = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [feeRecords, setFeeRecords] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [selectedClass, setSelectedClass] = useState('All Classes');
+  const [selectedFeeType, setSelectedFeeType] = useState('All Fee Types');
+  
   const [paymentForm, setPaymentForm] = useState({
     studentId: '',
+    classId: '',
     amount: '',
-    feeType: '',
-    paymentDate: '2025-11-03'
+    feeType: 'Tuition Fee',
+    dueDate: new Date().toISOString().split('T')[0],
+    status: 'pending',
+    remarks: ''
   });
 
-  const [feeRecords, setFeeRecords] = useState([
-    { studentId: '001', name: 'Alice Johnson', class: '10-A', feeType: 'Tuition Fee', amount: '₹5,000', dueDate: '01/09/2024', paidDate: '28/08/2024', status: 'Paid' },
-    { studentId: '002', name: 'Bob Smith', class: '10-A', feeType: 'Tuition Fee', amount: '₹5,000', dueDate: '01/09/2024', paidDate: '-', status: 'Pending' },
-    { studentId: '003', name: 'Charlie Brown', class: '10-A', feeType: 'Library Fee', amount: '₹500', dueDate: '15/08/2024', paidDate: '-', status: 'Overdue' },
-    { studentId: '004', name: 'Diana Prince', class: '10-A', feeType: 'Lab Fee', amount: '₹1,500', dueDate: '10/09/2024', paidDate: '05/09/2024', status: 'Paid' },
-  ]);
+  const [stats, setStats] = useState({
+    totalCollected: 0,
+    pending: 0,
+    overdue: 0,
+    totalRecords: 0
+  });
 
-  const handlePaymentSubmit = (e) => {
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all fee records
+      const feesRes = await feeAPI.getAllFees();
+      const fees = feesRes.data.data || [];
+      setFeeRecords(fees);
+      
+      // Fetch classes
+      const classesRes = await classAPI.getAllClasses();
+      setClasses(classesRes.data.data || []);
+      
+      // Calculate stats
+      const paid = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
+      const pending = fees.filter(f => f.status === 'pending').reduce((sum, f) => sum + f.amount, 0);
+      const overdue = fees.filter(f => f.status === 'overdue').reduce((sum, f) => sum + f.amount, 0);
+      
+      setStats({
+        totalCollected: paid,
+        pending,
+        overdue,
+        totalRecords: fees.length
+      });
+    } catch (error) {
+      console.error('Error fetching fee data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePaymentSubmit = async (e) => {
     e.preventDefault();
-    alert('Payment recorded successfully!');
-    setShowPaymentModal(false);
-    setPaymentForm({ studentId: '', amount: '', feeType: '', paymentDate: '2025-11-03' });
+    try {
+      await feeAPI.createFee(paymentForm);
+      alert('Payment recorded successfully!');
+      setShowPaymentModal(false);
+      setPaymentForm({
+        studentId: '',
+        classId: '',
+        amount: '',
+        feeType: 'Tuition Fee',
+        dueDate: new Date().toISOString().split('T')[0],
+        status: 'pending',
+        remarks: ''
+      });
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      alert('Failed to record payment. Please try again.');
+    }
   };
 
-  const handleMarkPaid = (index) => {
-    const updated = [...feeRecords];
-    updated[index].status = 'Paid';
-    updated[index].paidDate = '03/11/2025';
-    setFeeRecords(updated);
+  const handleMarkPaid = async (feeId) => {
+    try {
+      await feeAPI.updateFee(feeId, {
+        status: 'paid',
+        paidDate: new Date()
+      });
+      fetchData(); // Refresh data
+      alert('Fee marked as paid!');
+    } catch (error) {
+      console.error('Error updating fee:', error);
+      alert('Failed to update fee status.');
+    }
   };
+
+  const filteredRecords = feeRecords.filter(record => {
+    const classMatch = selectedClass === 'All Classes' || record.classId?.name === selectedClass;
+    const feeTypeMatch = selectedFeeType === 'All Fee Types' || record.feeType === selectedFeeType;
+    return classMatch && feeTypeMatch;
+  });
 
   return (
     <div className="p-8">
@@ -38,6 +111,73 @@ const FeeDetails = () => {
           <span>💰</span><span>Record Payment</span>
         </button>
       </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading fee records...</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Fee Summary</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+                <div className="text-3xl font-bold text-green-600 mb-2">₹{stats.totalCollected.toLocaleString()}</div>
+                <div className="text-sm text-gray-600">Total Collected</div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+                <div className="text-3xl font-bold text-orange-600 mb-2">₹{stats.pending.toLocaleString()}</div>
+                <div className="text-sm text-gray-600">Pending</div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+                <div className="text-3xl font-bold text-red-600 mb-2">₹{stats.overdue.toLocaleString()}</div>
+                <div className="text-sm text-gray-600">Overdue</div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+                <div className="text-3xl font-bold text-blue-600 mb-2">{stats.totalRecords}</div>
+                <div className="text-sm text-gray-600">Total Records</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Filters</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Class</label>
+                <select 
+                  value={selectedClass}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                >
+                  <option>All Classes</option>
+                  {classes.map((cls) => (
+                    <option key={cls._id} value={cls.name}>{cls.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fee Type</label>
+                <select 
+                  value={selectedFeeType}
+                  onChange={(e) => setSelectedFeeType(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                >
+                  <option>All Fee Types</option>
+                  <option>Tuition Fee</option>
+                  <option>Library Fee</option>
+                  <option>Lab Fee</option>
+                  <option>Transport Fee</option>
+                  <option>Exam Fee</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -49,24 +189,82 @@ const FeeDetails = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Student ID</label>
-                  <input type="text" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" placeholder="Enter Student ID" value={paymentForm.studentId} onChange={(e) => setPaymentForm({...paymentForm, studentId: e.target.value})} />
+                  <input 
+                    type="text" 
+                    required 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" 
+                    placeholder="Enter Student ID" 
+                    value={paymentForm.studentId} 
+                    onChange={(e) => setPaymentForm({...paymentForm, studentId: e.target.value})} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Class ID</label>
+                  <input 
+                    type="text" 
+                    required 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" 
+                    placeholder="Enter Class ID" 
+                    value={paymentForm.classId} 
+                    onChange={(e) => setPaymentForm({...paymentForm, classId: e.target.value})} 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Amount</label>
-                  <input type="text" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" placeholder="Enter Amount" value={paymentForm.amount} onChange={(e) => setPaymentForm({...paymentForm, amount: e.target.value})} />
+                  <input 
+                    type="number" 
+                    required 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" 
+                    placeholder="Enter Amount" 
+                    value={paymentForm.amount} 
+                    onChange={(e) => setPaymentForm({...paymentForm, amount: e.target.value})} 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Fee Type</label>
-                  <select required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" value={paymentForm.feeType} onChange={(e) => setPaymentForm({...paymentForm, feeType: e.target.value})}>
-                    <option value="">Select Fee Type</option>
+                  <select 
+                    required 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" 
+                    value={paymentForm.feeType} 
+                    onChange={(e) => setPaymentForm({...paymentForm, feeType: e.target.value})}
+                  >
                     <option value="Tuition Fee">Tuition Fee</option>
                     <option value="Library Fee">Library Fee</option>
                     <option value="Lab Fee">Lab Fee</option>
+                    <option value="Transport Fee">Transport Fee</option>
+                    <option value="Exam Fee">Exam Fee</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Date</label>
-                  <input type="date" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" value={paymentForm.paymentDate} onChange={(e) => setPaymentForm({...paymentForm, paymentDate: e.target.value})} />
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Due Date</label>
+                  <input 
+                    type="date" 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" 
+                    value={paymentForm.dueDate} 
+                    onChange={(e) => setPaymentForm({...paymentForm, dueDate: e.target.value})} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                  <select 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" 
+                    value={paymentForm.status} 
+                    onChange={(e) => setPaymentForm({...paymentForm, status: e.target.value})}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                    <option value="overdue">Overdue</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Remarks</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" 
+                    placeholder="Optional remarks" 
+                    value={paymentForm.remarks} 
+                    onChange={(e) => setPaymentForm({...paymentForm, remarks: e.target.value})} 
+                  />
                 </div>
               </div>
               <div className="flex gap-4 mt-6">
@@ -80,105 +278,72 @@ const FeeDetails = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Fee Summary</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-            <div className="text-3xl font-bold text-green-600 mb-2">₹6,500</div>
-            <div className="text-sm text-gray-600">Total Collected</div>
+      {!loading && (
+        <div className="bg-white rounded-lg border border-gray-300 overflow-hidden">
+          <div className="bg-gray-100 px-6 py-3 border-b border-gray-300">
+            <h2 className="text-lg font-bold text-gray-800">Fee Records ({filteredRecords.length})</h2>
           </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-            <div className="text-3xl font-bold text-orange-600 mb-2">₹7,000</div>
-            <div className="text-sm text-gray-600">Pending</div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-            <div className="text-3xl font-bold text-red-600 mb-2">₹500</div>
-            <div className="text-sm text-gray-600">Overdue</div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-            <div className="text-3xl font-bold text-blue-600 mb-2">5</div>
-            <div className="text-sm text-gray-600">Total Records</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Class</label>
-            <select className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none">
-              <option>All Classes</option>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                ['A', 'B', 'C', 'D'].map(grade => (
-                  <option key={`${num}-${grade}`} value={`${num}-${grade}`}>{num}-{grade}</option>
-                ))
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Fee Type</label>
-            <select className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none">
-              <option>All Fee Types</option>
-              <option>Tuition Fee</option>
-              <option>Library Fee</option>
-              <option>Lab Fee</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-300 overflow-hidden">
-        <div className="bg-gray-100 px-6 py-3 border-b border-gray-300">
-          <h2 className="text-lg font-bold text-gray-800">Fee Records (5)</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Student ID</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Student Name</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Class</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Fee Type</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Amount</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Due Date</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Paid Date</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {feeRecords.map((record, index) => (
-                <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-700">{record.studentId}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{record.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{record.class}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{record.feeType}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{record.amount}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{record.dueDate}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{record.paidDate}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      record.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                      record.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {record.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {record.status !== 'Paid' && (
-                      <button onClick={() => handleMarkPaid(index)} className="px-4 py-1 bg-green-100 text-green-700 rounded border border-green-300 text-sm font-medium hover:bg-green-200 transition-colors">
-                        Mark Paid
-                      </button>
-                    )}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Student</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Class</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Fee Type</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Amount</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Due Date</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Paid Date</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                      No fee records found. Add a new record to get started.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRecords.map((record) => (
+                    <tr key={record._id} className="border-b border-gray-200 hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm text-gray-700">{record.studentId?.fullName || 'N/A'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{record.classId?.name || 'N/A'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{record.feeType}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">₹{record.amount.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {new Date(record.dueDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {record.paidDate ? new Date(record.paidDate).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          record.status === 'paid' ? 'bg-green-100 text-green-700' :
+                          record.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {record.status !== 'paid' && (
+                          <button 
+                            onClick={() => handleMarkPaid(record._id)} 
+                            className="px-4 py-1 bg-green-100 text-green-700 rounded border border-green-300 text-sm font-medium hover:bg-green-200 transition-colors"
+                          >
+                            Mark Paid
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

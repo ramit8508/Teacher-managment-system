@@ -1,9 +1,52 @@
+import { useState, useEffect } from 'react';
+import { classAPI, attendanceAPI, feeAPI, examinationAPI } from '../api';
+
 const DashboardContent = ({ onMenuChange }) => {
-  const stats = [
-    { id: 1, icon: '👥', number: '156', label: 'Total Students', color: 'text-purple-600' },
-    { id: 2, icon: '✅', number: '142', label: 'Present Today', color: 'text-green-600' },
-    { id: 3, icon: '💰', number: '23', label: 'Pending Fees', color: 'text-orange-600' },
-    { id: 4, icon: '📝', number: '5', label: 'Recent Exams', color: 'text-red-600' },
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    presentToday: 0,
+    pendingFees: 0,
+    recentExams: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch classes to count students
+      const classesRes = await classAPI.getAllClasses();
+      const classes = classesRes.data.data || [];
+      
+      // Count total students across all classes
+      const totalStudents = classes.reduce((sum, cls) => sum + (cls.students?.length || 0), 0);
+      
+      // Fetch fees to count pending
+      const feesRes = await feeAPI.getAllFees({ status: 'pending' });
+      const pendingFees = feesRes.data.data?.length || 0;
+      
+      setStats({
+        totalStudents,
+        presentToday: 0, // Will be calculated from today's attendance
+        pendingFees,
+        recentExams: 0, // Can be fetched from examinations API
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statsDisplay = [
+    { id: 1, icon: '👥', number: stats.totalStudents, label: 'Total Students', color: 'text-purple-600' },
+    { id: 2, icon: '✅', number: stats.presentToday, label: 'Present Today', color: 'text-green-600' },
+    { id: 3, icon: '💰', number: stats.pendingFees, label: 'Pending Fees', color: 'text-orange-600' },
+    { id: 4, icon: '📝', number: stats.recentExams, label: 'Recent Exams', color: 'text-red-600' },
   ];
 
   const recentActivities = [
@@ -34,22 +77,31 @@ const DashboardContent = ({ onMenuChange }) => {
         <p className="text-gray-600">Welcome back to the Teacher Management System</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat) => (
-          <div
-            key={stat.id}
-            className="bg-white rounded-lg border border-gray-200 p-6 text-center hover:shadow-md transition-shadow"
-          >
-            <div className={`text-4xl mb-3 ${stat.color}`}>{stat.icon}</div>
-            <div className="text-3xl font-bold text-gray-800 mb-1">{stat.number}</div>
-            <div className="text-sm text-gray-600">{stat.label}</div>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading dashboard data...</p>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {statsDisplay.map((stat) => (
+              <div
+                key={stat.id}
+                className="bg-white rounded-lg border border-gray-200 p-6 text-center hover:shadow-md transition-shadow"
+              >
+                <div className={`text-4xl mb-3 ${stat.color}`}>{stat.icon}</div>
+                <div className="text-3xl font-bold text-gray-800 mb-1">{stat.number}</div>
+                <div className="text-sm text-gray-600">{stat.label}</div>
+              </div>
+            ))}
+          </div>
 
-      {/* Recent Activities and Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Recent Activities and Quick Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Recent Activities */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-bold text-gray-800 mb-4">Recent Activities</h2>
@@ -105,6 +157,8 @@ const DashboardContent = ({ onMenuChange }) => {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

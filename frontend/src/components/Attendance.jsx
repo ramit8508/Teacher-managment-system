@@ -1,57 +1,134 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { attendanceAPI, classAPI, authAPI } from '../api';
 
 const Attendance = () => {
-  const [selectedDate, setSelectedDate] = useState('2025-11-03');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedClass, setSelectedClass] = useState('');
-  
-  // All students database
-  const [allStudents] = useState([
-    { rollNo: '001', name: 'Alice Johnson', class: '10-A', attendance: true },
-    { rollNo: '002', name: 'Bob Smith', class: '10-A', attendance: true },
-    { rollNo: '003', name: 'Charlie Brown', class: '10-A', attendance: false },
-    { rollNo: '004', name: 'Diana Prince', class: '10-A', attendance: true },
-    { rollNo: '005', name: 'Emma Watson', class: '10-A', attendance: true },
-    { rollNo: '011', name: 'Frank Miller', class: '9-B', attendance: true },
-    { rollNo: '012', name: 'Grace Lee', class: '9-B', attendance: true },
-    { rollNo: '013', name: 'Henry Ford', class: '9-B', attendance: false },
-    { rollNo: '014', name: 'Isabella Garcia', class: '9-B', attendance: true },
-    { rollNo: '021', name: 'Jack Ryan', class: '8-C', attendance: true },
-    { rollNo: '022', name: 'Kate Wilson', class: '8-C', attendance: false },
-    { rollNo: '023', name: 'Liam Brown', class: '8-C', attendance: true },
-    { rollNo: '024', name: 'Mia Davis', class: '8-C', attendance: true },
-    { rollNo: '025', name: 'Noah Martinez', class: '8-C', attendance: true },
-  ]);
-  
-  const [displayedStudents, setDisplayedStudents] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [students, setStudents] = useState([]);
+  const [attendanceRecords, setAttendanceRecords] = useState({});
 
-  const handleLoadStudents = () => {
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  const fetchClasses = async () => {
+    try {
+      setLoading(true);
+      const response = await classAPI.getAllClasses();
+      setClasses(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoadStudents = async () => {
     if (!selectedClass) {
       alert('Please select a class first!');
       return;
     }
-    const filtered = allStudents.filter(student => student.class === selectedClass);
-    if (filtered.length === 0) {
-      alert(`No students found in class ${selectedClass}`);
+    
+    try {
+      setLoading(true);
+      
+      // Get class details with populated students
+      const classResponse = await classAPI.getClassById(selectedClass);
+      const classData = classResponse.data.data;
+      
+      if (!classData.students || classData.students.length === 0) {
+        alert(`No students enrolled in ${classData.name}`);
+        setStudents([]);
+        return;
+      }
+      
+      // Fetch attendance records for today
+      try {
+        const attendanceResponse = await attendanceAPI.getAllAttendance({
+          classId: selectedClass,
+          date: selectedDate
+        });
+        const todayAttendance = attendanceResponse.data.data || [];
+        
+        // Create a map of student attendance status
+        const attendanceMap = {};
+        todayAttendance.forEach(record => {
+          attendanceMap[record.studentId._id || record.studentId] = record.status === 'present';
+        });
+        
+        setAttendanceRecords(attendanceMap);
+      } catch (error) {
+        // No attendance marked yet for today
+        setAttendanceRecords({});
+      }
+      
+      setStudents(classData.students);
+    } catch (error) {
+      console.error('Error loading students:', error);
+      alert('Failed to load students. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setDisplayedStudents(filtered);
   };
 
-  const handleAttendanceToggle = (index) => {
-    const updatedStudents = [...displayedStudents];
-    updatedStudents[index].attendance = !updatedStudents[index].attendance;
-    setDisplayedStudents(updatedStudents);
+  const handleAttendanceToggle = (studentId) => {
+    setAttendanceRecords(prev => ({
+      ...prev,
+      [studentId]: !prev[studentId]
+    }));
   };
 
   const markAllPresent = () => {
-    setDisplayedStudents(displayedStudents.map(student => ({ ...student, attendance: true })));
+    const newRecords = {};
+    students.forEach(student => {
+      newRecords[student._id] = true;
+    });
+    setAttendanceRecords(newRecords);
   };
 
   const markAllAbsent = () => {
-    setDisplayedStudents(displayedStudents.map(student => ({ ...student, attendance: false })));
+    const newRecords = {};
+    students.forEach(student => {
+      newRecords[student._id] = false;
+    });
+    setAttendanceRecords(newRecords);
   };
 
-  const presentCount = displayedStudents.filter(s => s.attendance).length;
-  const absentCount = displayedStudents.length - presentCount;
+  const handleSaveAttendance = async () => {
+    if (!selectedClass || students.length === 0) {
+      alert('Please load students first!');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Create attendance records for each student
+      const attendanceData = students.map(student => ({
+        studentId: student._id,
+        classId: selectedClass,
+        date: selectedDate,
+        status: attendanceRecords[student._id] ? 'present' : 'absent'
+      }));
+
+      // Save each attendance record
+      await Promise.all(
+        attendanceData.map(record => attendanceAPI.createAttendance(record))
+      );
+
+      alert('Attendance saved successfully!');
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      alert('Failed to save attendance. Some records may already exist for today.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const presentCount = students.filter(s => attendanceRecords[s._id]).length;
+  const absentCount = students.length - presentCount;
 
   return (
     <div className="p-8">
@@ -82,12 +159,11 @@ const Attendance = () => {
               value={selectedClass} 
               onChange={(e) => setSelectedClass(e.target.value)} 
               className="w-full px-4 py-2 border-2 border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+              disabled={loading}
             >
               <option value="">-- Select Class --</option>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                ['A', 'B', 'C', 'D'].map(grade => (
-                  <option key={`${num}-${grade}`} value={`${num}-${grade}`}>Class {num}-{grade}</option>
-                ))
+              {classes.map((cls) => (
+                <option key={cls._id} value={cls._id}>{cls.name}</option>
               ))}
             </select>
           </div>
@@ -107,17 +183,17 @@ const Attendance = () => {
           </div>
         </div>
         
-        {selectedClass && displayedStudents.length > 0 && (
+        {selectedClass && students.length > 0 && (
           <div className="mt-4 p-3 bg-green-50 border border-green-300 rounded-md">
             <p className="text-sm text-green-800 font-medium">
-              ✅ Loaded {displayedStudents.length} students from Class {selectedClass}
+              ✅ Loaded {students.length} students from selected class
             </p>
           </div>
         )}
       </div>
 
       {/* Quick Actions - only show when students are loaded */}
-      {displayedStudents.length > 0 && (
+      {students.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
           <h2 className="text-lg font-bold text-gray-800 mb-4">Quick Actions</h2>
           <div className="flex gap-4">
@@ -128,22 +204,23 @@ const Attendance = () => {
               <span>❌</span><span>Mark All Absent</span>
             </button>
             <button 
-              onClick={() => alert('Attendance saved successfully!')}
-              className="px-6 py-2 bg-blue-100 text-blue-700 rounded-md border border-blue-300 font-medium hover:bg-blue-200 transition-colors flex items-center gap-2 ml-auto"
+              onClick={handleSaveAttendance}
+              disabled={loading}
+              className="px-6 py-2 bg-blue-100 text-blue-700 rounded-md border border-blue-300 font-medium hover:bg-blue-200 transition-colors flex items-center gap-2 ml-auto disabled:opacity-50"
             >
-              <span>💾</span><span>Save Attendance</span>
+              <span>💾</span><span>{loading ? 'Saving...' : 'Save Attendance'}</span>
             </button>
           </div>
         </div>
       )}
 
       {/* Attendance Summary - only show when students are loaded */}
-      {displayedStudents.length > 0 && (
+      {students.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Attendance Summary - Class {selectedClass}</h2>
+          <h2 className="text-lg font-bold text-gray-800 mb-4">Attendance Summary</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-              <div className="text-4xl font-bold text-blue-600 mb-2">{displayedStudents.length}</div>
+              <div className="text-4xl font-bold text-blue-600 mb-2">{students.length}</div>
               <div className="text-sm text-gray-600">Total Students</div>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
@@ -159,33 +236,38 @@ const Attendance = () => {
       )}
 
       {/* Student List - only show when students are loaded */}
-      {displayedStudents.length > 0 ? (
+      {students.length > 0 ? (
         <div className="bg-white rounded-lg border border-gray-300 overflow-hidden">
           <div className="bg-gray-100 px-6 py-3 border-b border-gray-300 flex justify-between items-center">
-            <h2 className="text-lg font-bold text-gray-800">Student Attendance List - Class {selectedClass}</h2>
+            <h2 className="text-lg font-bold text-gray-800">Student Attendance List</h2>
             <span className="text-sm text-gray-600">Date: {selectedDate}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Roll No.</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Student Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Class</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Phone</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Attendance</th>
                 </tr>
               </thead>
               <tbody>
-                {displayedStudents.map((student, index) => (
-                  <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-700">{student.rollNo}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{student.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{student.class}</td>
+                {students.map((student) => (
+                  <tr key={student._id} className="border-b border-gray-200 hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-gray-700">{student.fullName}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{student.email}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{student.phone || 'N/A'}</td>
                     <td className="px-6 py-4">
                       <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={student.attendance} onChange={() => handleAttendanceToggle(index)} className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer" />
-                        <span className={`text-sm font-medium ${student.attendance ? 'text-green-600' : 'text-red-600'}`}>
-                          {student.attendance ? 'Present' : 'Absent'}
+                        <input 
+                          type="checkbox" 
+                          checked={attendanceRecords[student._id] || false} 
+                          onChange={() => handleAttendanceToggle(student._id)} 
+                          className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer" 
+                        />
+                        <span className={`text-sm font-medium ${attendanceRecords[student._id] ? 'text-green-600' : 'text-red-600'}`}>
+                          {attendanceRecords[student._id] ? 'Present' : 'Absent'}
                         </span>
                       </label>
                     </td>

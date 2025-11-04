@@ -2,16 +2,8 @@ import { useState } from 'react';
 import Login from '../components/Login';
 import Signup from '../components/Signup';
 
-const Auth = ({ setIsLoggedIn }) => {
+const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [registeredUsers, setRegisteredUsers] = useState([]);
-
-  const handleSuccessfulSignup = (userData) => {
-    // Store the registered user
-    setRegisteredUsers([...registeredUsers, userData]);
-    // Switch to login page
-    setIsLogin(true);
-  };
 
   return (
     <div className="min-h-screen w-full bg-gray-100 flex items-center justify-center p-4">
@@ -53,9 +45,9 @@ const Auth = ({ setIsLoggedIn }) => {
         </div>
         
         {isLogin ? (
-          <Login setIsLogin={setIsLogin} setIsLoggedIn={setIsLoggedIn} registeredUsers={registeredUsers} />
+          <Login setIsLogin={setIsLogin} />
         ) : (
-          <Signup setIsLogin={setIsLogin} onSuccessfulSignup={handleSuccessfulSignup} />
+          <Signup setIsLogin={setIsLogin} />
         )}
 
         <div className="text-center mt-8 text-sm text-gray-500">

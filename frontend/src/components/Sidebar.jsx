@@ -1,11 +1,11 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ onMenuChange, onLogout }) => {
   const [activeMenu, setActiveMenu] = useState('Dashboard');
+  const { user } = useAuth();
   
-  // Get current logged-in user
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  const teacherName = currentUser.name || 'Demo Teacher';
+  const teacherName = user?.fullName || 'User';
 
   const menuItems = [
     { id: 1, name: 'Dashboard', icon: '🏠' },

@@ -1,44 +1,37 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
-const Login = ({ setIsLogin, setIsLoggedIn, registeredUsers }) => {
+const Login = ({ setIsLogin }) => {
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
-    // Simulate API call with timeout
-    setTimeout(() => {
-      // Get registered users from localStorage
-      const storedUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      
-      // Check if credentials match any registered user
-      const user = storedUsers.find(
-        (u) => u.username === formData.username && u.password === formData.password
-      );
-
-      if (user) {
-        // Store current logged-in user
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        alert(`Welcome back, ${user.name}!`);
-        setIsLoading(false);
-        setIsLoggedIn(true);
-      } else {
-        setIsLoading(false);
-        alert('Invalid username or password!\n\nPlease check your credentials or register if you don\'t have an account.');
-      }
-    }, 1500);
+    const result = await login(formData);
+    
+    if (result.success) {
+      // Login successful - AuthContext will handle state update
+      console.log('Login successful');
+    } else {
+      setError(result.message || 'Invalid credentials');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -50,20 +43,25 @@ const Login = ({ setIsLogin, setIsLoggedIn, registeredUsers }) => {
 
       {/* Form */}
       <div className="p-6">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-              Username
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              Email or Username
             </label>
             <input
               type="text"
-              id="username"
-              name="username"
-              value={formData.username}
+              id="email"
+              name="email"
+              value={formData.email}
               onChange={handleChange}
               required
               className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition"
-              placeholder="Enter your username"
+              placeholder="Enter your email or username"
             />
           </div>
 

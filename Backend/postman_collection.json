@@ -1,0 +1,226 @@
+{
+  "info": {
+    "name": "Teacher Management System API",
+    "description": "Complete API collection for Teacher Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000/api/v1"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register Teacher",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{base_url}}/users/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"teacher_john\",\n  \"email\": \"john.teacher@school.com\",\n  \"fullName\": \"John Smith\",\n  \"password\": \"Teacher@123\",\n  \"role\": \"teacher\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Student",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{base_url}}/users/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"student_alice\",\n  \"email\": \"alice@school.com\",\n  \"fullName\": \"Alice Johnson\",\n  \"password\": \"Student@123\",\n  \"role\": \"student\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{base_url}}/users/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.teacher@school.com\",\n  \"password\": \"Teacher@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{access_token}}"}],
+            "url": "{{base_url}}/users/current-user"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{access_token}}"}],
+            "url": "{{base_url}}/users/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Classes",
+      "item": [
+        {
+          "name": "Create Class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{access_token}}"}
+            ],
+            "url": "{{base_url}}/classes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"className\": \"Mathematics\",\n  \"section\": \"Grade 10-A\",\n  \"subject\": \"Advanced Algebra\",\n  \"schedule\": {\n    \"day\": \"Monday\",\n    \"startTime\": \"09:00 AM\",\n    \"endTime\": \"10:00 AM\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Classes",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{access_token}}"}],
+            "url": "{{base_url}}/classes"
+          }
+        },
+        {
+          "name": "Get Class by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{access_token}}"}],
+            "url": "{{base_url}}/classes/:id"
+          }
+        },
+        {
+          "name": "Add Student to Class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{access_token}}"}
+            ],
+            "url": "{{base_url}}/classes/:id/add-student",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"STUDENT_ID_HERE\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "Mark Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{access_token}}"}
+            ],
+            "url": "{{base_url}}/attendance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student\": \"STUDENT_ID\",\n  \"classId\": \"CLASS_ID\",\n  \"date\": \"2025-11-04\",\n  \"status\": \"present\",\n  \"remarks\": \"On time\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Attendance by Student",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{access_token}}"}],
+            "url": "{{base_url}}/attendance/student/:studentId"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Examinations",
+      "item": [
+        {
+          "name": "Create Examination",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{access_token}}"}
+            ],
+            "url": "{{base_url}}/examinations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student\": \"STUDENT_ID\",\n  \"classId\": \"CLASS_ID\",\n  \"examName\": \"Mid-Term Exam\",\n  \"subject\": \"Mathematics\",\n  \"totalMarks\": 100,\n  \"obtainedMarks\": 85,\n  \"examDate\": \"2025-11-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Examinations by Student",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{access_token}}"}],
+            "url": "{{base_url}}/examinations/student/:studentId"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fees",
+      "item": [
+        {
+          "name": "Create Fee Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{access_token}}"}
+            ],
+            "url": "{{base_url}}/fees",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student\": \"STUDENT_ID\",\n  \"academicYear\": \"2025-2026\",\n  \"totalFee\": 50000,\n  \"dueDate\": \"2025-12-31\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Fees by Student",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{access_token}}"}],
+            "url": "{{base_url}}/fees/student/:studentId"
+          }
+        },
+        {
+          "name": "Record Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{access_token}}"}
+            ],
+            "url": "{{base_url}}/fees/:id/payment",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 25000,\n  \"paymentMethod\": \"Bank Transfer\",\n  \"transactionId\": \"TXN123456789\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

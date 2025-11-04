@@ -1,72 +1,64 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
-const Signup = ({ setIsLogin, onSuccessfulSignup }) => {
+const Signup = ({ setIsLogin }) => {
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
+    fullName: '',
     email: '',
     username: '',
     password: '',
     confirmPassword: '',
+    role: 'teacher',
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
+      setError('Passwords do not match!');
       return;
     }
 
     // Validate password length
     if (formData.password.length < 6) {
-      alert('Password must be at least 6 characters long!');
+      setError('Password must be at least 6 characters long!');
       return;
     }
 
-    // Store user credentials
+    setIsLoading(true);
+
+    // Prepare user data
     const userData = {
-      name: formData.name,
+      fullName: formData.fullName,
       email: formData.email,
       username: formData.username,
       password: formData.password,
+      role: formData.role,
     };
 
-    // Save to localStorage for persistence
-    const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+    const result = await register(userData);
     
-    // Check if username already exists
-    if (existingUsers.some(user => user.username === userData.username)) {
-      alert('Username already exists! Please choose a different username.');
-      return;
+    setIsLoading(false);
+
+    if (result.success) {
+      alert(`Registration successful! Welcome ${formData.fullName}!\n\nYou can now login with your credentials.`);
+      setIsLogin(true);
+    } else {
+      setError(result.message || 'Registration failed. Please try again.');
     }
-
-    // Check if email already exists
-    if (existingUsers.some(user => user.email === userData.email)) {
-      alert('Email already registered! Please use a different email.');
-      return;
-    }
-
-    existingUsers.push(userData);
-    localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-
-    // Call parent callback
-    if (onSuccessfulSignup) {
-      onSuccessfulSignup(userData);
-    }
-
-    // Show success message
-    alert(`Registration successful! Welcome ${formData.name}!\n\nYou can now login with your credentials.`);
-    
-    // Switch to login page
-    setIsLogin(true);
   };
 
   return (
@@ -78,16 +70,21 @@ const Signup = ({ setIsLogin, onSuccessfulSignup }) => {
 
       {/* Form */}
       <div className="p-6">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
               Full Name
             </label>
             <input
               type="text"
-              id="name"
-              name="name"
-              value={formData.name}
+              id="fullName"
+              name="fullName"
+              value={formData.fullName}
               onChange={handleChange}
               required
               className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition"
@@ -159,12 +156,42 @@ const Signup = ({ setIsLogin, onSuccessfulSignup }) => {
             />
           </div>
 
+          <div>
+            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+              Role
+            </label>
+            <select
+              id="role"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition"
+            >
+              <option value="teacher">Teacher</option>
+              <option value="admin">Admin</option>
+              <option value="student">Student</option>
+            </select>
+          </div>
+
           <button
             type="submit"
-            className="w-full bg-blue-100 text-blue-600 py-3 rounded-md font-medium hover:bg-blue-200 transition duration-200 border border-blue-200 flex items-center justify-center gap-2"
+            disabled={isLoading}
+            className={`w-full bg-blue-100 text-blue-600 py-3 rounded-md font-medium transition duration-200 border border-blue-200 flex items-center justify-center gap-2 ${
+              isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-200'
+            }`}
           >
-            <span>✏️</span>
-            <span>Register</span>
+            {isLoading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span>Registering...</span>
+              </>
+            ) : (
+              <>
+                <span>✏️</span>
+                <span>Register</span>
+              </>
+            )}
           </button>
         </form>
 
