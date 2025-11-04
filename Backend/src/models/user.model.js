@@ -55,6 +55,10 @@ const userSchema = new Schema(
       ref: "User",
       default: null
     },
+    isBlocked: {
+      type: Boolean,
+      default: false
+    },
     avatar: {
       type: String, // URL to avatar image
       default: ""

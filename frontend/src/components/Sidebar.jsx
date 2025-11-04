@@ -8,12 +8,19 @@ const Sidebar = ({ onMenuChange, onLogout, isOpen, setIsOpen }) => {
   const teacherName = user?.fullName || 'User';
 
   const menuItems = [
-    { id: 1, name: 'Dashboard', icon: '🏠' },
-    { id: 2, name: 'Students & Classes', icon: '👥' },
-    { id: 3, name: 'Attendance', icon: '📋' },
-    { id: 4, name: 'Fee Details', icon: '💰' },
-    { id: 5, name: 'Examination Scores', icon: '📊' },
+    { id: 1, name: 'Dashboard', icon: '🏠', roles: ['teacher', 'admin'] },
+    { id: 2, name: 'Students & Classes', icon: '👥', roles: ['teacher'] },
+    { id: 3, name: 'Attendance', icon: '📋', roles: ['teacher'] },
+    { id: 4, name: 'Fee Details', icon: '💰', roles: ['teacher'] },
+    { id: 5, name: 'Examination Scores', icon: '📊', roles: ['teacher'] },
+    { id: 6, name: 'Manage Teachers', icon: '👨‍🏫', roles: ['admin'] },
+    { id: 7, name: 'Manage Students', icon: '👥', roles: ['admin'] },
   ];
+
+  // Filter menu items based on user role
+  const filteredMenuItems = menuItems.filter(item => 
+    item.roles.includes(user?.role)
+  );
 
   const handleMenuClick = (menuName) => {
     setActiveMenu(menuName);
@@ -71,7 +78,7 @@ const Sidebar = ({ onMenuChange, onLogout, isOpen, setIsOpen }) => {
 
       {/* Menu Items */}
       <nav className="flex-1 p-3">
-        {menuItems.map((item) => (
+        {filteredMenuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => handleMenuClick(item.name)}
@@ -92,7 +99,9 @@ const Sidebar = ({ onMenuChange, onLogout, isOpen, setIsOpen }) => {
         <div className="text-xs text-gray-600 mb-2">
           <p>Ready</p>
           <p>03/11/2025</p>
-          <p className="text-blue-600 font-medium">Teacher: {teacherName}</p>
+          <p className="text-blue-600 font-medium">
+            {user?.role === 'admin' ? '👑 Administrator' : `Teacher: ${teacherName}`}
+          </p>
         </div>
         <button 
           onClick={handleLogout}

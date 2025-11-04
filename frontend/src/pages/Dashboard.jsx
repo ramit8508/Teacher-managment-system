@@ -1,16 +1,36 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import DashboardContent from '../components/DashboardContent';
+import AdminDashboard from '../components/AdminDashboard';
+import AdminTeachers from '../components/AdminTeachers';
+import AdminStudents from '../components/AdminStudents';
 import StudentsClasses from '../components/StudentsClasses';
 import Attendance from '../components/Attendance';
 import FeeDetails from '../components/FeeDetails';
 import ExaminationScores from '../components/ExaminationScores';
 
 const Dashboard = ({ onLogout }) => {
+  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const renderContent = () => {
+    // Admin routes
+    if (user?.role === 'admin') {
+      switch (currentPage) {
+        case 'Dashboard':
+          return <AdminDashboard />;
+        case 'Manage Teachers':
+          return <AdminTeachers />;
+        case 'Manage Students':
+          return <AdminStudents />;
+        default:
+          return <AdminDashboard />;
+      }
+    }
+
+    // Teacher routes
     switch (currentPage) {
       case 'Dashboard':
         return <DashboardContent onMenuChange={setCurrentPage} />;
@@ -41,7 +61,9 @@ const Dashboard = ({ onLogout }) => {
         >
           <span className="text-2xl">☰</span>
         </button>
-        <h1 className="text-lg font-semibold text-gray-800">Teacher Management</h1>
+        <h1 className="text-lg font-semibold text-gray-800">
+          {user?.role === 'admin' ? 'Admin Panel' : 'Teacher Management'}
+        </h1>
         <div className="w-10"></div> {/* Spacer for centering */}
       </div>
 

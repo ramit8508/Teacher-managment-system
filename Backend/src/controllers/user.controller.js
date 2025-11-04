@@ -86,6 +86,11 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User does not exist");
   }
 
+  // Check if user is blocked
+  if (user.isBlocked) {
+    throw new ApiError(403, "Your account has been blocked. Please contact the administrator.");
+  }
+
   // Prevent students from logging in to the management system
   if (user.role === "student") {
     throw new ApiError(403, "Students cannot login to the management system. Only teachers and admins are allowed.");
@@ -201,11 +206,18 @@ const getUserById = asyncHandler(async (req, res) => {
 
 const updateUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { fullName, email, role } = req.body;
+  const { fullName, email, username, role, isBlocked } = req.body;
+
+  const updateData = {};
+  if (fullName !== undefined) updateData.fullName = fullName;
+  if (email !== undefined) updateData.email = email;
+  if (username !== undefined) updateData.username = username;
+  if (role !== undefined) updateData.role = role;
+  if (isBlocked !== undefined) updateData.isBlocked = isBlocked;
 
   const user = await User.findByIdAndUpdate(
     id,
-    { fullName, email, role },
+    updateData,
     { new: true, runValidators: true }
   ).select("-password -refreshToken");
 
