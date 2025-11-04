@@ -2,11 +2,20 @@ import axios from 'axios';
 
 // Determine the base URL based on environment
 const getBaseURL = () => {
-  // For production, use the backend URL from environment variable
-  if (import.meta.env.PROD) {
-    return import.meta.env.VITE_API_URL || '/api/v1';
+  // Check if VITE_API_URL is defined in environment variables
+  const envApiUrl = import.meta.env.VITE_API_URL;
+  
+  if (envApiUrl) {
+    return envApiUrl;
   }
-  // For development, use proxy
+  
+  // For production without env variable, you MUST set VITE_API_URL in Vercel
+  if (import.meta.env.PROD) {
+    console.error('⚠️ VITE_API_URL not set! Please add it in Vercel environment variables');
+    return '/api/v1'; // This will fail in production
+  }
+  
+  // For local development, use proxy
   return '/api/v1';
 };
 
