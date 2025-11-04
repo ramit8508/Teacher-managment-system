@@ -170,8 +170,10 @@ const Signup = ({ setIsLogin }) => {
             >
               <option value="teacher">Teacher</option>
               <option value="admin">Admin</option>
-              <option value="student">Student</option>
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Students are added by teachers, not through registration
+            </p>
           </div>
 
           <button

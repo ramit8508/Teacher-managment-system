@@ -19,7 +19,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, email, fullName, password, role } = req.body;
+  const { username, email, fullName, password, role, phone, address, classId } = req.body;
 
   // Validation
   if ([username, email, fullName, password].some((field) => field?.trim() === "")) {
@@ -41,7 +41,10 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     fullName,
     password,
-    role: role || "teacher"
+    role: role || "teacher",
+    phone: phone || "",
+    address: address || "",
+    classId: classId || null
   });
 
   // Remove password and refreshToken from response
@@ -69,6 +72,11 @@ const loginUser = asyncHandler(async (req, res) => {
 
   if (!user) {
     throw new ApiError(404, "User does not exist");
+  }
+
+  // Prevent students from logging in to the management system
+  if (user.role === "student") {
+    throw new ApiError(403, "Students cannot login to the management system. Only teachers and admins are allowed.");
   }
 
   const isPasswordValid = await user.isPasswordCorrect(password);
@@ -147,7 +155,9 @@ const getAllUsers = asyncHandler(async (req, res) => {
     ];
   }
 
-  const users = await User.find(query).select("-password -refreshToken");
+  const users = await User.find(query)
+    .select("-password -refreshToken")
+    .populate('classId', 'name subject teacher');
 
   return res.status(200).json(
     new ApiResponse(200, users, "Users fetched successfully")

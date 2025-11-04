@@ -27,6 +27,6 @@ router.route("/")
 router.route("/:id")
   .get(verifyJWT, getUserById)
   .put(verifyJWT, verifyRole("teacher", "admin"), updateUser)
-  .delete(verifyJWT, verifyRole("admin"), deleteUser);
+  .delete(verifyJWT, verifyRole("teacher", "admin"), deleteUser);
 
 export default router;

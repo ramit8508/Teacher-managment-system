@@ -33,6 +33,19 @@ const userSchema = new Schema(
       enum: ["teacher", "admin", "student"],
       default: "teacher"
     },
+    phone: {
+      type: String,
+      default: ""
+    },
+    address: {
+      type: String,
+      default: ""
+    },
+    classId: {
+      type: Schema.Types.ObjectId,
+      ref: "Class",
+      default: null
+    },
     avatar: {
       type: String, // URL to avatar image
       default: ""

@@ -5,7 +5,9 @@ import {
   getExaminationsByClass,
   getExaminationsByStudent,
   updateExamination,
-  deleteExamination
+  deleteExamination,
+  createBulkExaminations,
+  getExaminationStats
 } from "../controllers/examination.controller.js";
 import { verifyJWT, verifyRole } from "../middlewares/auth.middleware.js";
 
@@ -17,6 +19,12 @@ router.use(verifyJWT);
 router.route("/")
   .get(getAllExaminations)
   .post(verifyRole("teacher", "admin"), createExamination);
+
+router.route("/bulk")
+  .post(verifyRole("teacher", "admin"), createBulkExaminations);
+
+router.route("/stats")
+  .get(getExaminationStats);
 
 router.route("/class/:classId")
   .get(getExaminationsByClass);
