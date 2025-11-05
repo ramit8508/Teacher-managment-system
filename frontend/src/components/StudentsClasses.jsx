@@ -287,7 +287,38 @@ const StudentsClasses = () => {
         const username = email.split('@')[0].toLowerCase(); // Generate username from email
         
         // Get class value from CSV
-        const classValue = values[headers.indexOf('class') !== -1 ? headers.indexOf('class') : 5] || values[5] || '';
+        let classValue = values[headers.indexOf('class') !== -1 ? headers.indexOf('class') : 5] || values[5] || '';
+        
+        // Normalize class format: convert to proper case
+        if (classValue) {
+          // Handle formats like "3b", "3B", "class 3b", "Class 3 - Section b", etc.
+          classValue = classValue.trim();
+          
+          // Pattern 1: "3b" or "3B" -> "Class 3 - Section B"
+          const shortFormat = classValue.match(/^(\d+)([a-dA-D])$/);
+          if (shortFormat) {
+            const classNum = shortFormat[1];
+            const section = shortFormat[2].toUpperCase();
+            classValue = `Class ${classNum} - Section ${section}`;
+          }
+          // Pattern 2: "class 3 section b" or variations -> "Class 3 - Section B"
+          else if (classValue.toLowerCase().includes('class') && classValue.toLowerCase().includes('section')) {
+            const classMatch = classValue.match(/class\s*(\d+)/i);
+            const sectionMatch = classValue.match(/section\s*([a-dA-D])/i);
+            if (classMatch && sectionMatch) {
+              const classNum = classMatch[1];
+              const section = sectionMatch[1].toUpperCase();
+              classValue = `Class ${classNum} - Section ${section}`;
+            }
+          }
+          // Pattern 3: Already in format but maybe lowercase section -> normalize
+          else if (classValue.match(/^Class \d+ - Section [a-dA-D]$/i)) {
+            const parts = classValue.match(/^Class (\d+) - Section ([a-dA-D])$/i);
+            if (parts) {
+              classValue = `Class ${parts[1]} - Section ${parts[2].toUpperCase()}`;
+            }
+          }
+        }
         
         // Check if it's a predefined class (starts with "Class") or a database class
         let studentClassData = {};
