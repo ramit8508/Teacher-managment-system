@@ -228,9 +228,26 @@ const StudentsClasses = () => {
         const email = values[headers.indexOf('email') !== -1 ? headers.indexOf('email') : 1] || values[1];
         const username = email.split('@')[0].toLowerCase(); // Generate username from email
         
-        // Find class by name if provided
-        const className = values[headers.indexOf('class') !== -1 ? headers.indexOf('class') : 5] || values[5] || '';
-        const classObj = classes.find(cls => cls.name.toLowerCase() === className.toLowerCase());
+        // Get class value from CSV
+        const classValue = values[headers.indexOf('class') !== -1 ? headers.indexOf('class') : 5] || values[5] || '';
+        
+        // Check if it's a predefined class (starts with "Class") or a database class
+        let studentClassData = {};
+        if (classValue) {
+          if (classValue.startsWith('Class ')) {
+            // Predefined class like "Class 2 - Section A"
+            studentClassData.className = classValue;
+          } else {
+            // Try to find database class by name
+            const classObj = classes.find(cls => cls.name.toLowerCase() === classValue.toLowerCase());
+            if (classObj) {
+              studentClassData.classId = classObj._id;
+            } else {
+              // If not found in database, treat as predefined class
+              studentClassData.className = classValue;
+            }
+          }
+        }
         
         const student = {
           fullName: values[headers.indexOf('name') !== -1 ? headers.indexOf('name') : 0] || values[0],
@@ -240,7 +257,7 @@ const StudentsClasses = () => {
           role: 'student',
           phone: values[headers.indexOf('phone') !== -1 ? headers.indexOf('phone') : 3] || values[3] || '',
           address: values[headers.indexOf('address') !== -1 ? headers.indexOf('address') : 4] || values[4] || '',
-          classId: classObj ? classObj._id : '' // Assign class ID if found
+          ...studentClassData // Add classId or className
         };
         students.push(student);
       }
@@ -450,9 +467,10 @@ const StudentsClasses = () => {
                 <ul className="text-sm text-blue-700 space-y-1 ml-4">
                   <li>• Upload a CSV file (.csv format)</li>
                   <li>• First row should be headers: <code className="bg-white px-1 rounded">name, email, phone, address, class</code></li>
-                  <li>• Example: <code className="bg-white px-2 py-1 rounded">John Doe,john@example.com,1234567890,123 Street,Class A</code></li>
+                  <li>• For class field, use predefined classes like: <code className="bg-white px-1 rounded">Class 1 - Section A</code></li>
+                  <li>• Example: <code className="bg-white px-2 py-1 rounded">John Doe,john@example.com,1234567890,123 Street,Class 2 - Section A</code></li>
                   <li>• Password will be auto-generated as <code className="bg-white px-1 rounded font-mono">Student@123</code></li>
-                  <li>• Class name must match existing class (leave empty if not assigning)</li>
+                  <li>• Leave class empty if not assigning to any class</li>
                 </ul>
               </div>
 
@@ -460,9 +478,8 @@ const StudentsClasses = () => {
               <div className="mb-6">
                 <button
                   onClick={() => {
-                    // Generate class names for template
-                    const classNames = classes.length > 0 ? classes.slice(0, 2).map(c => c.name).join('/') : 'Class A';
-                    const csvContent = `name,email,phone,address,class\nJohn Doe,john@example.com,1234567890,123 Main St,${classes[0]?.name || ''}\nJane Smith,jane@example.com,0987654321,456 Oak Ave,${classes[1]?.name || ''}`;
+                    // Generate sample CSV with predefined classes
+                    const csvContent = `name,email,phone,address,class\nJohn Doe,john@example.com,1234567890,123 Main St,Class 1 - Section A\nJane Smith,jane@example.com,0987654321,456 Oak Ave,Class 2 - Section B\nMike Johnson,mike@example.com,9876543210,789 Park Rd,Class 3 - Section C`;
                     const blob = new Blob([csvContent], { type: 'text/csv' });
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
