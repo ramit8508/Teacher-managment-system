@@ -199,6 +199,64 @@ const StudentsClasses = () => {
     }
   };
 
+  const handleDeleteAllStudents = async () => {
+    const studentCount = students.length;
+    
+    if (studentCount === 0) {
+      alert('No students to delete!');
+      return;
+    }
+
+    const confirmMessage = `⚠️ WARNING: This will permanently delete ALL ${studentCount} students from the database!\n\nThis action CANNOT be undone.\n\nType "DELETE ALL" to confirm:`;
+    const userInput = prompt(confirmMessage);
+    
+    if (userInput !== 'DELETE ALL') {
+      alert('Deletion cancelled. You must type "DELETE ALL" exactly to confirm.');
+      return;
+    }
+
+    // Double confirmation
+    const doubleConfirm = confirm(`Are you ABSOLUTELY SURE you want to delete all ${studentCount} students?\n\nClick OK to proceed with deletion.`);
+    
+    if (!doubleConfirm) {
+      alert('Deletion cancelled.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+
+      // Delete all students one by one
+      for (const student of students) {
+        try {
+          await authAPI.deleteUser(student._id);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to delete ${student.fullName}:`, error);
+          failCount++;
+        }
+      }
+
+      if (failCount === 0) {
+        alert(`✅ Successfully deleted all ${successCount} students!`);
+      } else {
+        alert(`⚠️ Deleted ${successCount} students.\n${failCount} students could not be deleted.`);
+      }
+
+      // Refresh the list
+      fetchData();
+
+    } catch (error) {
+      console.error('Error during bulk deletion:', error);
+      alert('❌ An error occurred during deletion. Please check console for details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -447,6 +505,16 @@ const StudentsClasses = () => {
                   <span>➕</span>
                   <span>Add New Student</span>
                 </button>
+                {students.length > 0 && (
+                  <button 
+                    onClick={handleDeleteAllStudents}
+                    className="px-6 py-2 bg-red-100 text-red-700 rounded-lg border border-red-300 font-medium hover:bg-red-200 transition-colors flex items-center gap-2"
+                    title="Delete all students from database"
+                  >
+                    <span>🗑️</span>
+                    <span>Delete All Students</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
