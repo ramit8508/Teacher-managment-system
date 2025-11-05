@@ -15,9 +15,6 @@ const createFeeRecord = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Student, amount, and due date are required");
   }
 
-  // Determine if using predefined class or database class
-  const isPredefinedClass = classId && classId.startsWith('Class ');
-
   const feeData = {
     student: studentField,
     academicYear: academicYearField,
@@ -28,9 +25,9 @@ const createFeeRecord = asyncHandler(async (req, res) => {
     remarks: remarks || ''
   };
 
-  // Add class information based on type
-  if (isPredefinedClass) {
-    feeData.className = classId;
+  // Add class information - check both className and classId
+  if (className) {
+    feeData.className = className;
   } else if (classId) {
     feeData.classId = classId;
   }
