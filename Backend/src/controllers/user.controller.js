@@ -206,7 +206,7 @@ const getUserById = asyncHandler(async (req, res) => {
 
 const updateUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { fullName, email, username, role, isBlocked } = req.body;
+  const { fullName, email, username, role, isBlocked, phone, address, classId, className } = req.body;
 
   const updateData = {};
   if (fullName !== undefined) updateData.fullName = fullName;
@@ -214,12 +214,20 @@ const updateUser = asyncHandler(async (req, res) => {
   if (username !== undefined) updateData.username = username;
   if (role !== undefined) updateData.role = role;
   if (isBlocked !== undefined) updateData.isBlocked = isBlocked;
+  if (phone !== undefined) updateData.phone = phone;
+  if (address !== undefined) updateData.address = address;
+  
+  // Handle classId and className (allow null values to clear them)
+  if (classId !== undefined) updateData.classId = classId;
+  if (className !== undefined) updateData.className = className;
 
   const user = await User.findByIdAndUpdate(
     id,
     updateData,
     { new: true, runValidators: true }
-  ).select("-password -refreshToken");
+  )
+    .select("-password -refreshToken")
+    .populate('classId', 'name subject teacher');
 
   if (!user) {
     throw new ApiError(404, "User not found");

@@ -27,18 +27,36 @@ const BulkExamEditor = () => {
     }
   };
 
-  const handleClassChange = (classId) => {
+  const handleClassChange = async (classId) => {
     setSelectedClass(classId);
-    const selectedClassData = classes.find(c => c._id === classId);
-    const classStudents = selectedClassData?.students || [];
-    setStudents(classStudents);
     
-    // Initialize marks object
-    const marks = {};
-    classStudents.forEach(student => {
-      marks[student._id] = '';
-    });
-    setStudentMarks(marks);
+    try {
+      let classStudents = [];
+      
+      if (classId.startsWith('Class')) {
+        // Predefined class - fetch all students with this className
+        const response = await authAPI.getAllUsers({ role: 'student' });
+        const allStudents = response.data.data || [];
+        classStudents = allStudents.filter(s => s.className === classId);
+      } else {
+        // Database class - get students from class roster
+        const selectedClassData = classes.find(c => c._id === classId);
+        classStudents = selectedClassData?.students || [];
+      }
+      
+      setStudents(classStudents);
+      
+      // Initialize marks object
+      const marks = {};
+      classStudents.forEach(student => {
+        marks[student._id] = '';
+      });
+      setStudentMarks(marks);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      setStudents([]);
+      setStudentMarks({});
+    }
   };
 
   const handleMarkChange = (studentId, marks) => {
@@ -129,11 +147,24 @@ const BulkExamEditor = () => {
               className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
             >
               <option value="">-- Select a Class --</option>
-              {classes.map((cls) => (
-                <option key={cls._id} value={cls._id}>
-                  {cls.className} - {cls.section} ({cls.subject}) - {cls.students?.length || 0} students
-                </option>
-              ))}
+              {/* Predefined class options: Class 1-10 with sections A-D */}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+                ['A', 'B', 'C', 'D'].map(section => (
+                  <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
+                    Class {classNum} - Section {section}
+                  </option>
+                ))
+              )}
+              {/* Also show database classes if any */}
+              {classes.length > 0 && (
+                <optgroup label="── Database Classes ──">
+                  {classes.map((cls) => (
+                    <option key={cls._id} value={cls._id}>
+                      {cls.name} - {cls.subject} ({cls.students?.length || 0} students)
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
 
