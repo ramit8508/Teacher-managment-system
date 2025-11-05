@@ -7,24 +7,31 @@ const Sidebar = ({ onMenuChange, onLogout, isOpen, setIsOpen }) => {
   
   const teacherName = user?.fullName || 'User';
 
+  // Super Admin email - only this email can manage admins
+  const SUPER_ADMIN_EMAIL = 'admin@school.com';
+  const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
+
   const menuItems = [
-    { id: 1, name: 'Dashboard', icon: '🏠', roles: ['teacher', 'admin'] },
-    { id: 2, name: 'Students & Classes', icon: '👥', roles: ['teacher'] },
-    { id: 3, name: 'Attendance', icon: '📋', roles: ['teacher'] },
-    { id: 4, name: 'Fee Details', icon: '💰', roles: ['teacher'] },
-    { id: 5, name: 'Examination Scores', icon: '📊', roles: ['teacher'] },
-    { id: 6, name: 'Bulk Fee Management', icon: '💵', roles: ['teacher', 'admin'] },
-    { id: 7, name: 'Bulk Exam Editor', icon: '📝', roles: ['teacher', 'admin'] },
-    { id: 8, name: 'Class Promotion', icon: '🎓', roles: ['teacher', 'admin'] },
-    { id: 9, name: 'Manage Teachers', icon: '👨‍🏫', roles: ['admin'] },
-    { id: 10, name: 'Manage Students', icon: '👥', roles: ['admin'] },
-    { id: 11, name: 'Change Password', icon: '🔐', roles: ['teacher', 'admin'] },
+    { id: 1, name: 'Dashboard', icon: '🏠', roles: ['teacher', 'admin'], superAdminOnly: false },
+    { id: 2, name: 'Students & Classes', icon: '👥', roles: ['teacher'], superAdminOnly: false },
+    { id: 3, name: 'Attendance', icon: '📋', roles: ['teacher'], superAdminOnly: false },
+    { id: 4, name: 'Fee Details', icon: '💰', roles: ['teacher'], superAdminOnly: false },
+    { id: 5, name: 'Examination Scores', icon: '📊', roles: ['teacher'], superAdminOnly: false },
+    { id: 6, name: 'Bulk Fee Management', icon: '💵', roles: ['teacher', 'admin'], superAdminOnly: false },
+    { id: 7, name: 'Bulk Exam Editor', icon: '📝', roles: ['teacher', 'admin'], superAdminOnly: false },
+    { id: 8, name: 'Class Promotion', icon: '🎓', roles: ['teacher', 'admin'], superAdminOnly: false },
+    { id: 9, name: 'Manage Teachers', icon: '👨‍🏫', roles: ['admin'], superAdminOnly: false },
+    { id: 10, name: 'Manage Students', icon: '👥', roles: ['admin'], superAdminOnly: false },
+    { id: 11, name: 'Change Password', icon: '🔐', roles: ['teacher', 'admin'], superAdminOnly: false },
+    { id: 12, name: 'Manage Admins', icon: '👑', roles: ['admin'], superAdminOnly: true },
   ];
 
-  // Filter menu items based on user role
-  const filteredMenuItems = menuItems.filter(item => 
-    item.roles.includes(user?.role)
-  );
+  // Filter menu items based on user role and super admin status
+  const filteredMenuItems = menuItems.filter(item => {
+    if (!item.roles.includes(user?.role)) return false;
+    if (item.superAdminOnly && !isSuperAdmin) return false;
+    return true;
+  });
 
   const handleMenuClick = (menuName) => {
     setActiveMenu(menuName);
@@ -104,7 +111,9 @@ const Sidebar = ({ onMenuChange, onLogout, isOpen, setIsOpen }) => {
           <p>Ready</p>
           <p>03/11/2025</p>
           <p className="text-blue-600 font-medium">
-            {user?.role === 'admin' ? '👑 Administrator' : `Teacher: ${teacherName}`}
+            {user?.role === 'admin' 
+              ? (isSuperAdmin ? '⭐ Super Admin' : '👑 Administrator')
+              : `Teacher: ${teacherName}`}
           </p>
         </div>
         <button 

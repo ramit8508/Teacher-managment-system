@@ -38,9 +38,17 @@ const AdminDashboard = () => {
       const fees = feesRes.data.data || [];
       const pendingFees = fees.filter(f => f.status === 'pending' || f.status === 'overdue').length;
       
-      // Fetch classes
-      const classesRes = await classAPI.getAllClasses();
-      const classes = classesRes.data.data || [];
+      // Count unique classes from students (both className and classId)
+      const uniqueClasses = new Set();
+      students.forEach(student => {
+        if (student.className) {
+          uniqueClasses.add(student.className);
+        }
+        if (student.classId?.name) {
+          uniqueClasses.add(student.classId.name);
+        }
+      });
+      const totalClasses = uniqueClasses.size;
       
       // Fetch examinations
       const examsRes = await examinationAPI.getAllExaminations();
@@ -49,7 +57,7 @@ const AdminDashboard = () => {
       setStats({
         totalTeachers: teachers.length,
         totalStudents: students.length,
-        totalClasses: classes.length,
+        totalClasses: totalClasses,
         totalFees: fees.length,
         totalExams: exams.length,
         pendingFees: pendingFees,

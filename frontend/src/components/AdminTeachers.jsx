@@ -8,6 +8,7 @@ const AdminTeachers = () => {
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [newTeacher, setNewTeacher] = useState({
     fullName: '',
     email: '',
@@ -18,6 +19,23 @@ const AdminTeachers = () => {
     address: '',
     role: 'teacher',
   });
+
+  // Super Admin email - only this email can promote users to admin
+  const SUPER_ADMIN_EMAIL = 'admin@school.com';
+  const isSuperAdmin = currentUser?.email === SUPER_ADMIN_EMAIL;
+
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await authAPI.getCurrentUser();
+      setCurrentUser(response.data.data);
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  };
 
   useEffect(() => {
     fetchTeachers();
@@ -46,7 +64,8 @@ const AdminTeachers = () => {
       fetchTeachers();
     } catch (error) {
       console.error(`Error ${action}ing teacher:`, error);
-      alert(`Failed to ${action} teacher`);
+      console.error('Full error:', error.response?.data);
+      alert(error.response?.data?.message || `Failed to ${action} teacher`);
     }
   };
 
@@ -78,7 +97,8 @@ const AdminTeachers = () => {
       fetchTeachers();
     } catch (error) {
       console.error('Error updating teacher:', error);
-      alert('Failed to update teacher');
+      console.error('Full error:', error.response?.data);
+      alert(error.response?.data?.message || 'Failed to update teacher');
     }
   };
 
@@ -118,7 +138,27 @@ const AdminTeachers = () => {
       fetchTeachers();
     } catch (error) {
       console.error('Error deleting teacher:', error);
-      alert('Failed to delete teacher');
+      console.error('Full error details:', error.response?.data);
+      alert(error.response?.data?.message || 'Failed to delete teacher');
+    }
+  };
+
+  const handlePromoteToAdmin = async (teacherId, teacherName) => {
+    if (!isSuperAdmin) {
+      alert('Only Super Admin can promote users to Admin role!');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to promote ${teacherName} to Admin?\n\nThey will have full administrative access.`)) return;
+
+    try {
+      await authAPI.updateUser(teacherId, { role: 'admin' });
+      alert(`${teacherName} has been promoted to Admin successfully!`);
+      fetchTeachers();
+    } catch (error) {
+      console.error('Error promoting to admin:', error);
+      console.error('Full error details:', error.response?.data);
+      alert(error.response?.data?.message || 'Failed to promote user to admin');
     }
   };
 
@@ -245,7 +285,7 @@ const AdminTeachers = () => {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-2">
+                          <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => handleEdit(teacher)}
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
@@ -253,6 +293,15 @@ const AdminTeachers = () => {
                             >
                               ✏️
                             </button>
+                            {isSuperAdmin && teacher.role !== 'admin' && (
+                              <button
+                                onClick={() => handlePromoteToAdmin(teacher._id, teacher.fullName)}
+                                className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
+                                title="Promote to Admin"
+                              >
+                                👑
+                              </button>
+                            )}
                             <button
                               onClick={() => handleBlockUnblock(teacher._id, teacher.isBlocked)}
                               className={`p-1.5 rounded ${

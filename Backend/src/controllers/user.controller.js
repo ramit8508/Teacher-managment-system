@@ -207,7 +207,7 @@ const getUserById = asyncHandler(async (req, res) => {
 
 const updateUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { fullName, email, username, role, isBlocked, phone, address, classId, className, currentPassword, newPassword } = req.body;
+  const { fullName, email, username, role, isBlocked, phone, address, subject, classId, className, currentPassword, newPassword } = req.body;
 
   // Find the user first
   const user = await User.findById(id);

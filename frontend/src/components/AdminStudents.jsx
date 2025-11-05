@@ -5,6 +5,7 @@ const AdminStudents = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [classFilter, setClassFilter] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -22,7 +23,8 @@ const AdminStudents = () => {
       setStudents(response.data.data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
-      alert('Failed to fetch students');
+      console.error('Full error details:', error.response?.data);
+      alert(error.response?.data?.message || 'Failed to fetch students');
     } finally {
       setLoading(false);
     }
@@ -80,7 +82,8 @@ const AdminStudents = () => {
       fetchStudents();
     } catch (error) {
       console.error('Error updating student:', error);
-      alert('Failed to update student');
+      console.error('Full error details:', error.response?.data);
+      alert(error.response?.data?.message || 'Failed to update student');
     }
   };
 
@@ -107,15 +110,33 @@ const AdminStudents = () => {
       fetchStudents();
     } catch (error) {
       console.error('Error deleting student:', error);
-      alert('Failed to delete student');
+      console.error('Full error details:', error.response?.data);
+      alert(error.response?.data?.message || 'Failed to delete student');
     }
   };
 
-  const filteredStudents = students.filter(student =>
-    student.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.username?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = students.filter(student => {
+    // Search filter
+    const matchesSearch = student.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.username?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Class filter
+    if (classFilter === '') return matchesSearch;
+    if (classFilter === 'unassigned') {
+      return matchesSearch && !student.className && !student.classId;
+    }
+    
+    const studentClass = student.className || student.classId?.name || '';
+    return matchesSearch && studentClass === classFilter;
+  });
+
+  // Get unique classes for filter dropdown
+  const uniqueClasses = [...new Set(
+    students
+      .map(s => s.className || s.classId?.name)
+      .filter(Boolean)
+  )].sort();
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -125,8 +146,8 @@ const AdminStudents = () => {
         <p className="text-sm sm:text-base text-gray-600">View, edit, and manage student records</p>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6">
+      {/* Search and Filter */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <input
           type="text"
           placeholder="🔍 Search students by name, email, or username..."
@@ -134,6 +155,20 @@ const AdminStudents = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
         />
+        
+        <select
+          value={classFilter}
+          onChange={(e) => setClassFilter(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+        >
+          <option value="">🏫 All Classes</option>
+          <option value="unassigned">📋 Unassigned Students</option>
+          {uniqueClasses.map(className => (
+            <option key={className} value={className}>
+              {className}
+            </option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -146,10 +181,14 @@ const AdminStudents = () => {
       ) : (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
             <div className="bg-purple-50 rounded-lg border border-purple-200 p-4">
               <p className="text-sm text-gray-600">Total Students</p>
               <p className="text-2xl font-bold text-purple-600">{students.length}</p>
+            </div>
+            <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+              <p className="text-sm text-gray-600">{classFilter ? 'Filtered' : 'Showing'}</p>
+              <p className="text-2xl font-bold text-blue-600">{filteredStudents.length}</p>
             </div>
             <div className="bg-green-50 rounded-lg border border-green-200 p-4">
               <p className="text-sm text-gray-600">Active Students</p>
@@ -199,6 +238,7 @@ const AdminStudents = () => {
                   
                   <div className="mb-3 text-sm text-gray-600">
                     <p>📧 {student.email}</p>
+                    <p>🏫 Class: {student.className || student.classId?.name || 'Not assigned'}</p>
                     <p>📅 Joined: {new Date(student.createdAt).toLocaleDateString()}</p>
                   </div>
 
@@ -269,11 +309,16 @@ const AdminStudents = () => {
                 {/* Class Info */}
                 <div className="bg-blue-50 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-800 mb-2">🏫 Class Information</h3>
-                  {studentDetails.class ? (
+                  {selectedStudent.className || selectedStudent.classId || studentDetails.class ? (
                     <div className="text-sm text-gray-700">
-                      <p><strong>Class:</strong> {studentDetails.class.className}</p>
-                      <p><strong>Section:</strong> {studentDetails.class.section}</p>
-                      <p><strong>Subject:</strong> {studentDetails.class.subject}</p>
+                      <p><strong>Class:</strong> {
+                        selectedStudent.className || 
+                        studentDetails.class?.name || 
+                        'Not assigned'
+                      }</p>
+                      {studentDetails.class?.subject && (
+                        <p><strong>Subject:</strong> {studentDetails.class.subject}</p>
+                      )}
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500">Not enrolled in any class</p>

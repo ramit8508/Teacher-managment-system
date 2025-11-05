@@ -159,7 +159,8 @@ const BulkExamEditor = () => {
 
     } catch (error) {
       console.error('Error creating bulk exam scores:', error);
-      alert('Failed to record exam scores. Please try again.');
+      console.error('Full error details:', error.response?.data);
+      alert(error.response?.data?.message || 'Failed to record exam scores. Please try again.');
     } finally {
       setLoading(false);
     }

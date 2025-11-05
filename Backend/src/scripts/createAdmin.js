@@ -28,16 +28,17 @@ const createAdminUser = async () => {
       fullName: "System Administrator",
       password: "admin123", // Will be hashed automatically by pre-save hook
       role: "admin",
+      isSuperAdmin: true, // Make this admin a super admin
       phone: "1234567890",
       address: "School Office"
     });
 
-    console.log("✅ Admin user created successfully!");
+    console.log("✅ Super Admin user created successfully!");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("📧 Email: admin@school.com");
     console.log("👤 Username: admin");
     console.log("🔑 Password: admin123");
-    console.log("👑 Role: admin");
+    console.log("👑 Role: Super Admin (can add other admins)");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("⚠️ IMPORTANT: Change the password after first login!");
     

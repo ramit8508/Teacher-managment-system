@@ -5,6 +5,7 @@ import DashboardContent from '../components/DashboardContent';
 import AdminDashboard from '../components/AdminDashboard';
 import AdminTeachers from '../components/AdminTeachers';
 import AdminStudents from '../components/AdminStudents';
+import ManageAdmins from '../components/ManageAdmins';
 import StudentsClasses from '../components/StudentsClasses';
 import Attendance from '../components/Attendance';
 import FeeDetails from '../components/FeeDetails';
@@ -29,6 +30,8 @@ const Dashboard = ({ onLogout }) => {
           return <AdminTeachers />;
         case 'Manage Students':
           return <AdminStudents />;
+        case 'Manage Admins':
+          return <ManageAdmins />;
         case 'Bulk Fee Management':
           return <BulkFeeManagement />;
         case 'Bulk Exam Editor':

@@ -146,7 +146,8 @@ const ClassPromotion = () => {
 
     } catch (error) {
       console.error('Error promoting students:', error);
-      alert('Failed to promote students. Please try again.');
+      console.error('Full error details:', error.response?.data);
+      alert(error.response?.data?.message || 'Failed to promote students. Please try again.');
     } finally {
       setLoading(false);
     }

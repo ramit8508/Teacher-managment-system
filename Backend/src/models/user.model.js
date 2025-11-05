@@ -63,6 +63,10 @@ const userSchema = new Schema(
       type: Boolean,
       default: false
     },
+    isSuperAdmin: {
+      type: Boolean,
+      default: false
+    },
     avatar: {
       type: String, // URL to avatar image
       default: ""
