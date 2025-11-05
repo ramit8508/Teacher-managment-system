@@ -41,6 +41,10 @@ const userSchema = new Schema(
       type: String,
       default: ""
     },
+    subject: {
+      type: String,
+      default: ""
+    },
     classId: {
       type: Schema.Types.ObjectId,
       ref: "Class",

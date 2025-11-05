@@ -13,6 +13,9 @@ const AdminTeachers = () => {
     email: '',
     username: '',
     password: '',
+    subject: '',
+    phone: '',
+    address: '',
     role: 'teacher',
   });
 
@@ -53,6 +56,9 @@ const AdminTeachers = () => {
       fullName: teacher.fullName,
       email: teacher.email,
       username: teacher.username,
+      subject: teacher.subject || '',
+      phone: teacher.phone || '',
+      address: teacher.address || '',
     });
     setShowEditModal(true);
   };
@@ -63,6 +69,9 @@ const AdminTeachers = () => {
         fullName: editingTeacher.fullName,
         email: editingTeacher.email,
         username: editingTeacher.username,
+        subject: editingTeacher.subject,
+        phone: editingTeacher.phone,
+        address: editingTeacher.address,
       });
       alert('Teacher updated successfully!');
       setShowEditModal(false);
@@ -75,8 +84,8 @@ const AdminTeachers = () => {
 
   const handleAddTeacher = async () => {
     try {
-      if (!newTeacher.fullName || !newTeacher.email || !newTeacher.username || !newTeacher.password) {
-        alert('Please fill all fields');
+      if (!newTeacher.fullName || !newTeacher.email || !newTeacher.username || !newTeacher.password || !newTeacher.subject) {
+        alert('Please fill all required fields (Name, Email, Username, Password, Subject)');
         return;
       }
       
@@ -88,6 +97,9 @@ const AdminTeachers = () => {
         email: '',
         username: '',
         password: '',
+        subject: '',
+        phone: '',
+        address: '',
         role: 'teacher',
       });
       fetchTeachers();
@@ -182,8 +194,9 @@ const AdminTeachers = () => {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase hidden sm:table-cell">Email</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase hidden md:table-cell">Username</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase hidden lg:table-cell">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase hidden md:table-cell">Subject</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase hidden sm:table-cell">Username</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Status</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Actions</th>
                   </tr>
@@ -191,7 +204,7 @@ const AdminTeachers = () => {
                 <tbody className="divide-y divide-gray-200">
                   {filteredTeachers.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
                         No teachers found
                       </td>
                     </tr>
@@ -207,12 +220,17 @@ const AdminTeachers = () => {
                             </div>
                             <div>
                               <p className="text-sm font-medium text-gray-800">{teacher.fullName}</p>
-                              <p className="text-xs text-gray-500 sm:hidden">{teacher.email}</p>
+                              <p className="text-xs text-gray-500 md:hidden">{teacher.subject || 'No subject'}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">{teacher.email}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">{teacher.username}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">{teacher.email}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
+                          <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs font-medium">
+                            {teacher.subject || 'Not specified'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">{teacher.username}</td>
                         <td className="px-4 py-3">
                           {teacher.isBlocked ? (
                             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
@@ -268,7 +286,7 @@ const AdminTeachers = () => {
       {/* Edit Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Teacher</h2>
             <div className="space-y-4">
               <div>
@@ -298,6 +316,36 @@ const AdminTeachers = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject/Department</label>
+                <input
+                  type="text"
+                  value={editingTeacher.subject}
+                  onChange={(e) => setEditingTeacher({ ...editingTeacher, subject: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                  placeholder="e.g., Mathematics, Science, English"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={editingTeacher.phone}
+                  onChange={(e) => setEditingTeacher({ ...editingTeacher, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <textarea
+                  value={editingTeacher.address}
+                  onChange={(e) => setEditingTeacher({ ...editingTeacher, address: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                  placeholder="Optional"
+                  rows="2"
+                />
+              </div>
             </div>
             <div className="flex gap-3 mt-6">
               <button
@@ -320,47 +368,93 @@ const AdminTeachers = () => {
       {/* Add Teacher Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Add New Teacher</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={newTeacher.fullName}
                   onChange={(e) => setNewTeacher({ ...newTeacher, fullName: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
                   placeholder="Enter full name"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="email"
                   value={newTeacher.email}
                   onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
                   placeholder="Enter email"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Username <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={newTeacher.username}
                   onChange={(e) => setNewTeacher({ ...newTeacher, username: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
                   placeholder="Enter username"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="password"
                   value={newTeacher.password}
                   onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
                   placeholder="Enter password"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Subject/Department <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newTeacher.subject}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, subject: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                  placeholder="e.g., Mathematics, Science, English"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">What subject does this teacher teach?</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={newTeacher.phone}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <textarea
+                  value={newTeacher.address}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, address: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                  placeholder="Optional"
+                  rows="2"
                 />
               </div>
               <div>

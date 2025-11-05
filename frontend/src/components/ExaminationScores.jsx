@@ -150,20 +150,84 @@ const ExaminationScores = () => {
     }
   };
 
+  const handleDeleteAll = async () => {
+    const totalExams = examinations.length;
+    
+    if (totalExams === 0) {
+      alert('No examination records to delete!');
+      return;
+    }
+
+    // First confirmation
+    const firstConfirm = window.confirm(
+      `⚠️ WARNING: You are about to delete ALL ${totalExams} examination records!\n\n` +
+      'This action CANNOT be undone.\n\n' +
+      'Click OK to continue to final confirmation.'
+    );
+
+    if (!firstConfirm) return;
+
+    // Second confirmation with exact count
+    const secondConfirm = window.confirm(
+      `🚨 FINAL CONFIRMATION 🚨\n\n` +
+      `Are you ABSOLUTELY SURE you want to permanently delete all ${totalExams} examination records?\n\n` +
+      'This will delete:\n' +
+      `• ${totalExams} exam records\n` +
+      '• All student scores and grades\n' +
+      '• All examination history\n\n' +
+      'Type YES mentally and click OK to proceed with deletion.'
+    );
+
+    if (!secondConfirm) return;
+
+    try {
+      setLoading(true);
+      
+      // Delete all examinations one by one
+      const deletePromises = examinations.map(exam => 
+        examinationAPI.deleteExamination(exam._id)
+      );
+      
+      await Promise.all(deletePromises);
+      
+      alert(`✅ Successfully deleted all ${totalExams} examination records!`);
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting all examinations:', error);
+      alert('❌ Failed to delete some examination records. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredExams = selectedClass === 'All Classes'
     ? examinations
-    : examinations.filter(exam => exam.classId?.name === selectedClass);
+    : examinations.filter(exam => {
+        // Check both className (for predefined classes) and classId.name (for database classes)
+        return exam.className === selectedClass || 
+               exam.class?.name === selectedClass || 
+               exam.class?.className === selectedClass;
+      });
 
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Examination Scores</h1>
-        <button 
-          onClick={() => setShowAddModal(true)} 
-          className="px-6 py-2 bg-blue-100 text-blue-700 rounded-lg border border-blue-300 font-medium hover:bg-blue-200 transition-colors flex items-center gap-2"
-        >
-          <span>➕</span><span>Add Score</span>
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setShowAddModal(true)} 
+            className="px-6 py-2 bg-blue-100 text-blue-700 rounded-lg border border-blue-300 font-medium hover:bg-blue-200 transition-colors flex items-center gap-2"
+          >
+            <span>➕</span><span>Add Score</span>
+          </button>
+          <button 
+            onClick={handleDeleteAll}
+            disabled={examinations.length === 0 || loading}
+            className="px-6 py-2 bg-red-100 text-red-700 rounded-lg border border-red-300 font-medium hover:bg-red-200 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span>🗑️</span><span>Delete All Exams</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Section */}
@@ -233,7 +297,9 @@ const ExaminationScores = () => {
                   filteredExams.map((exam) => (
                     <tr key={exam._id} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm text-gray-700">{exam.student?.fullName || 'N/A'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{exam.class?.className || 'N/A'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {exam.className || exam.class?.name || exam.class?.className || 'N/A'}
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-700">{exam.examName}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{exam.examType}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">

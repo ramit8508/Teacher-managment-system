@@ -34,6 +34,43 @@ const Login = () => {
     }
   };
 
+  const handleAdminQuickLogin = () => {
+    // Allowed admin emails - ONLY these 2 emails can use admin login
+    const allowedAdminEmails = [
+      'admin@school.com',
+      'ramitgoyal8508@gmail.com'
+    ];
+    
+    // Prompt for email verification
+    const userEmail = prompt('🔒 Admin Access - Step 1/2\n\nEnter your authorized admin email:');
+    
+    if (!userEmail) {
+      return; // User cancelled
+    }
+    
+    // Check if email is authorized
+    if (!allowedAdminEmails.includes(userEmail.toLowerCase().trim())) {
+      alert('❌ Access Denied!\n\nYour email is not authorized for admin access.\n\nOnly authorized administrators can login.');
+      return;
+    }
+    
+    // Prompt for password
+    const userPassword = prompt('🔒 Admin Access - Step 2/2\n\nEnter your password:');
+    
+    if (!userPassword) {
+      return; // User cancelled
+    }
+    
+    // Fill the form fields (don't auto-submit)
+    setFormData({
+      email: userEmail.toLowerCase().trim(),
+      password: userPassword
+    });
+    
+    // Show message to user
+    alert('✅ Credentials filled!\n\nPlease click the "Sign In" button to login.');
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md border border-gray-300 overflow-hidden">
       {/* Header */}
@@ -123,6 +160,27 @@ const Login = () => {
           <p className="text-xs text-gray-600 mt-1">
             Contact administrator to create a new account
           </p>
+        </div>
+      </div>
+
+      {/* Admin Quick Access */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-4 sm:px-6 py-3 border-t border-purple-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">👑</span>
+            <div>
+              <p className="text-xs font-semibold text-purple-700">🔒 Authorized Admin Access</p>
+              <p className="text-xs text-gray-600">Restricted to 2 authorized emails</p>
+            </div>
+          </div>
+          <button
+            onClick={handleAdminQuickLogin}
+            disabled={isLoading}
+            className="px-4 py-2 bg-purple-600 text-white text-xs font-medium rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            title="Requires authorized email"
+          >
+            � Admin Login
+          </button>
         </div>
       </div>
     </div>

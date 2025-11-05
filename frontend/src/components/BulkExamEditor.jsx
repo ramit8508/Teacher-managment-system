@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { classAPI, examinationAPI } from '../api';
+import { classAPI, examinationAPI, authAPI } from '../api';
 
 const BulkExamEditor = () => {
   const [classes, setClasses] = useState([]);
@@ -7,6 +7,7 @@ const BulkExamEditor = () => {
   const [students, setStudents] = useState([]);
   const [examData, setExamData] = useState({
     examName: '',
+    examSection: '', // New field for exam section/part
     subject: '',
     totalMarks: '',
     examDate: '',
@@ -77,29 +78,77 @@ const BulkExamEditor = () => {
     setLoading(true);
 
     try {
-      // Create exam record for each student
-      const examPromises = students.map(student => {
+      let updatedCount = 0;
+      let createdCount = 0;
+
+      // Process each student
+      for (const student of students) {
         const marksObtained = parseInt(studentMarks[student._id]) || 0;
         
-        return examinationAPI.createExamination({
-          student: student._id,
-          class: selectedClass,
-          examName: examData.examName,
-          subject: examData.subject,
-          totalMarks: parseInt(examData.totalMarks),
-          marksObtained: marksObtained,
-          examDate: examData.examDate,
-          grade: calculateGrade(marksObtained, parseInt(examData.totalMarks)),
-        });
-      });
+        // Check if exam record already exists for this student + examName + examSection
+        const existingExamsResponse = await examinationAPI.getExaminationsByStudent(student._id);
+        const existingExams = existingExamsResponse.data.data || [];
+        
+        // Find exam with same name, section, and class
+        const existingExam = existingExams.find(exam => 
+          exam.examName === examData.examName && 
+          (exam.remarks === examData.examSection || (!exam.remarks && !examData.examSection)) &&
+          (exam.className === selectedClass || exam.class?._id === selectedClass)
+        );
 
-      await Promise.all(examPromises);
+        if (existingExam) {
+          // UPDATE: Add new subject to existing exam
+          const updatedSubjects = [...existingExam.subjects];
+          
+          // Check if this subject already exists
+          const subjectIndex = updatedSubjects.findIndex(s => s.subjectName === examData.subject);
+          
+          if (subjectIndex >= 0) {
+            // Update existing subject marks
+            updatedSubjects[subjectIndex] = {
+              subjectName: examData.subject,
+              totalMarks: parseInt(examData.totalMarks),
+              obtainedMarks: marksObtained,
+            };
+          } else {
+            // Add new subject
+            updatedSubjects.push({
+              subjectName: examData.subject,
+              totalMarks: parseInt(examData.totalMarks),
+              obtainedMarks: marksObtained,
+            });
+          }
 
-      alert(`Exam scores recorded for ${students.length} students successfully!`);
+          await examinationAPI.updateExamination(existingExam._id, {
+            subjects: updatedSubjects,
+          });
+          updatedCount++;
+        } else {
+          // CREATE: New exam record
+          await examinationAPI.createExamination({
+            student: student._id,
+            classId: selectedClass,
+            examName: examData.examName,
+            examType: 'Unit Test',
+            subjects: [{
+              subjectName: examData.subject,
+              totalMarks: parseInt(examData.totalMarks),
+              obtainedMarks: marksObtained,
+            }],
+            examDate: examData.examDate,
+            remarks: examData.examSection, // Store exam section in remarks field
+          });
+          createdCount++;
+        }
+      }
+
+      const sectionInfo = examData.examSection ? ` (Section: ${examData.examSection})` : '';
+      alert(`✅ Success!${sectionInfo}\nCreated: ${createdCount} new exam records\nUpdated: ${updatedCount} existing exams with new subject`);
       
       // Reset form
       setExamData({
         examName: '',
+        examSection: '',
         subject: '',
         totalMarks: '',
         examDate: '',
@@ -182,6 +231,23 @@ const BulkExamEditor = () => {
                 placeholder="e.g., Mid-Term Exam"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Exam Section/Part
+                <span className="text-xs text-gray-500 ml-2">(Optional - leave blank if same exam)</span>
+              </label>
+              <input
+                type="text"
+                value={examData.examSection}
+                onChange={(e) => setExamData({ ...examData, examSection: e.target.value })}
+                placeholder="e.g., Part A, Section 1, Theory"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                💡 Different sections = separate exam slots. Same/blank = adds subjects to same slot.
+              </p>
             </div>
 
             <div>

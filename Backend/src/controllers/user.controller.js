@@ -19,7 +19,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, email, fullName, password, role, phone, address, classId, className } = req.body;
+  const { username, email, fullName, password, role, phone, address, subject, classId, className } = req.body;
 
   // Validation
   if ([username, email, fullName, password].some((field) => field?.trim() === "")) {
@@ -43,7 +43,7 @@ const registerUser = asyncHandler(async (req, res) => {
   console.log('  - req.user exists?', !!req.user);
   console.log('  - req.user._id:', req.user?._id);
   console.log('  - createdBy will be set to:', createdBy);
-  console.log('  - Student being added:', fullName);
+  console.log('  - User being added:', fullName);
 
   // Create user
   const user = await User.create({
@@ -54,6 +54,7 @@ const registerUser = asyncHandler(async (req, res) => {
     role: role || "teacher",
     phone: phone || "",
     address: address || "",
+    subject: subject || "",
     classId: classId || null,
     className: className || "",
     createdBy: createdBy
@@ -206,8 +207,34 @@ const getUserById = asyncHandler(async (req, res) => {
 
 const updateUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { fullName, email, username, role, isBlocked, phone, address, classId, className } = req.body;
+  const { fullName, email, username, role, isBlocked, phone, address, classId, className, currentPassword, newPassword } = req.body;
 
+  // Find the user first
+  const user = await User.findById(id);
+  
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // Handle password change separately
+  if (currentPassword && newPassword) {
+    // Verify current password
+    const isPasswordValid = await user.isPasswordCorrect(currentPassword);
+    
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Current password is incorrect");
+    }
+
+    // Update password (will be hashed by pre-save middleware)
+    user.password = newPassword;
+    await user.save();
+
+    return res.status(200).json(
+      new ApiResponse(200, { message: "Password changed successfully" }, "Password updated successfully")
+    );
+  }
+
+  // Handle regular profile updates
   const updateData = {};
   if (fullName !== undefined) updateData.fullName = fullName;
   if (email !== undefined) updateData.email = email;
@@ -216,12 +243,13 @@ const updateUser = asyncHandler(async (req, res) => {
   if (isBlocked !== undefined) updateData.isBlocked = isBlocked;
   if (phone !== undefined) updateData.phone = phone;
   if (address !== undefined) updateData.address = address;
+  if (subject !== undefined) updateData.subject = subject;
   
   // Handle classId and className (allow null values to clear them)
   if (classId !== undefined) updateData.classId = classId;
   if (className !== undefined) updateData.className = className;
 
-  const user = await User.findByIdAndUpdate(
+  const updatedUser = await User.findByIdAndUpdate(
     id,
     updateData,
     { new: true, runValidators: true }
@@ -229,12 +257,12 @@ const updateUser = asyncHandler(async (req, res) => {
     .select("-password -refreshToken")
     .populate('classId', 'name subject teacher');
 
-  if (!user) {
+  if (!updatedUser) {
     throw new ApiError(404, "User not found");
   }
 
   return res.status(200).json(
-    new ApiResponse(200, user, "User updated successfully")
+    new ApiResponse(200, updatedUser, "User updated successfully")
   );
 });
 

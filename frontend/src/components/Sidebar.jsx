@@ -18,6 +18,7 @@ const Sidebar = ({ onMenuChange, onLogout, isOpen, setIsOpen }) => {
     { id: 8, name: 'Class Promotion', icon: '🎓', roles: ['teacher', 'admin'] },
     { id: 9, name: 'Manage Teachers', icon: '👨‍🏫', roles: ['admin'] },
     { id: 10, name: 'Manage Students', icon: '👥', roles: ['admin'] },
+    { id: 11, name: 'Change Password', icon: '🔐', roles: ['teacher', 'admin'] },
   ];
 
   // Filter menu items based on user role

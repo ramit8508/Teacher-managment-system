@@ -54,7 +54,32 @@ const getFeesByStudent = asyncHandler(async (req, res) => {
 const getAllFees = asyncHandler(async (req, res) => {
   const { status } = req.query;
 
+  // If the logged-in user is a teacher (not admin), only show fees for students they created
+  let studentIds = null;
+  if (req.user && req.user.role === 'teacher') {
+    // First, get all students created by this teacher
+    const { User } = await import("../models/user.model.js");
+    const teacherStudents = await User.find({ 
+      role: 'student', 
+      createdBy: req.user._id 
+    }).select('_id');
+    
+    studentIds = teacherStudents.map(s => s._id);
+    
+    // If teacher has no students, return empty array
+    if (studentIds.length === 0) {
+      return res.status(200).json(
+        new ApiResponse(200, [], "No fee records found")
+      );
+    }
+  }
+
   const query = status ? { status } : {};
+  
+  // Add student filter for teachers
+  if (studentIds) {
+    query.student = { $in: studentIds };
+  }
 
   const fees = await Fee.find(query)
     .populate("student", "fullName email className")

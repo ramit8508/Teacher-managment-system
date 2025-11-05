@@ -12,6 +12,7 @@ import ExaminationScores from '../components/ExaminationScores';
 import BulkFeeManagement from '../components/BulkFeeManagement';
 import BulkExamEditor from '../components/BulkExamEditor';
 import ClassPromotion from '../components/ClassPromotion';
+import ChangePassword from '../components/ChangePassword';
 
 const Dashboard = ({ onLogout }) => {
   const { user } = useAuth();
@@ -34,6 +35,8 @@ const Dashboard = ({ onLogout }) => {
           return <BulkExamEditor />;
         case 'Class Promotion':
           return <ClassPromotion />;
+        case 'Change Password':
+          return <ChangePassword />;
         default:
           return <AdminDashboard />;
       }
@@ -61,6 +64,8 @@ const Dashboard = ({ onLogout }) => {
         return <BulkExamEditor />;
       case 'Class Promotion':
         return <ClassPromotion />;
+      case 'Change Password':
+        return <ChangePassword />;
       default:
         return <DashboardContent onMenuChange={setCurrentPage} />;
     }
