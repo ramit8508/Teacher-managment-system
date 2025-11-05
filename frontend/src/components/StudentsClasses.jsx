@@ -361,6 +361,7 @@ const StudentsClasses = () => {
           // Upload students one by one
           let successCount = 0;
           let failCount = 0;
+          const failedStudents = [];
 
           for (let i = 0; i < studentsData.length; i++) {
             try {
@@ -368,6 +369,12 @@ const StudentsClasses = () => {
               successCount++;
             } catch (error) {
               console.error(`Failed to add student ${studentsData[i].fullName}:`, error);
+              const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
+              failedStudents.push({
+                name: studentsData[i].fullName,
+                email: studentsData[i].email,
+                reason: errorMsg
+              });
               failCount++;
             }
             setUploadProgress(Math.round(((i + 1) / studentsData.length) * 100));
@@ -378,7 +385,19 @@ const StudentsClasses = () => {
           setUploadProgress(0);
           fetchData();
           
-          alert(`Bulk upload complete!\nSuccessfully added: ${successCount}\nFailed: ${failCount}`);
+          // Show detailed results
+          let message = `✅ Bulk upload complete!\n\n`;
+          message += `Successfully added: ${successCount}\n`;
+          message += `Failed: ${failCount}`;
+          
+          if (failedStudents.length > 0) {
+            message += `\n\n❌ Failed Students:\n`;
+            failedStudents.forEach(student => {
+              message += `\n• ${student.name} (${student.email})\n  Reason: ${student.reason}`;
+            });
+          }
+          
+          alert(message);
         } catch (error) {
           console.error('Error processing file:', error);
           alert('Failed to process file. Please check the format.');
