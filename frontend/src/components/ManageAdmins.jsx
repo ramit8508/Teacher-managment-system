@@ -6,6 +6,17 @@ const ManageAdmins = () => {
   const { user } = useAuth();
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newAdmin, setNewAdmin] = useState({
+    fullName: '',
+    email: '',
+    username: '',
+    password: '',
+    subject: '',
+    phone: '',
+    address: '',
+    role: 'admin',
+  });
 
   // Super Admin email - only this email can manage admins
   const SUPER_ADMIN_EMAIL = 'admin@school.com';
@@ -50,6 +61,33 @@ const ManageAdmins = () => {
     }
   };
 
+  const handleAddAdmin = async () => {
+    try {
+      if (!newAdmin.fullName || !newAdmin.email || !newAdmin.username || !newAdmin.password || !newAdmin.subject) {
+        alert('Please fill all required fields (Name, Email, Username, Password, Subject)');
+        return;
+      }
+      
+      await authAPI.register(newAdmin);
+      alert('Admin added successfully!');
+      setShowAddModal(false);
+      setNewAdmin({
+        fullName: '',
+        email: '',
+        username: '',
+        password: '',
+        subject: '',
+        phone: '',
+        address: '',
+        role: 'admin',
+      });
+      fetchAdmins();
+    } catch (error) {
+      console.error('Error adding admin:', error);
+      alert(error.response?.data?.message || 'Failed to add admin');
+    }
+  };
+
   if (!isSuperAdmin) {
     return (
       <div className="p-8">
@@ -64,11 +102,20 @@ const ManageAdmins = () => {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Manage Administrators</h1>
-        <p className="text-sm sm:text-base text-gray-600">
-          View and manage admin users. Only Super Admin can access this page.
-        </p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Manage Administrators</h1>
+          <p className="text-sm sm:text-base text-gray-600">
+            View and manage admin users. Only Super Admin can access this page.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium text-sm flex items-center gap-2"
+        >
+          <span>➕</span>
+          <span>Add Admin</span>
+        </button>
       </div>
 
       {loading ? (
@@ -188,6 +235,131 @@ const ManageAdmins = () => {
             </ul>
           </div>
         </>
+      )}
+
+      {/* Add Admin Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Add New Administrator</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newAdmin.fullName}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, fullName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+                  placeholder="Enter full name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={newAdmin.email}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+                  placeholder="Enter email"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Username <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newAdmin.username}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, username: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+                  placeholder="Enter username"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={newAdmin.password}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+                  placeholder="Enter password"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Subject/Department <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newAdmin.subject}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, subject: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+                  placeholder="e.g., Administration, IT, Management"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={newAdmin.phone}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <textarea
+                  value={newAdmin.address}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, address: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+                  placeholder="Optional"
+                  rows="2"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleAddAdmin}
+                className="flex-1 bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 font-medium"
+              >
+                Add Admin
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewAdmin({
+                    fullName: '',
+                    email: '',
+                    username: '',
+                    password: '',
+                    subject: '',
+                    phone: '',
+                    address: '',
+                    role: 'admin',
+                  });
+                }}
+                className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
