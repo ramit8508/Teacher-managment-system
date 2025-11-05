@@ -74,7 +74,34 @@ const FeeDetails = () => {
         await feeAPI.updateFee(paymentForm.id, paymentForm);
         alert('Payment updated successfully!');
       } else {
-        await feeAPI.createFee(paymentForm);
+        // Calculate academic year
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth();
+        const academicYear = currentMonth >= 3 ? `${currentYear}-${currentYear + 1}` : `${currentYear - 1}-${currentYear}`;
+
+        // Prepare fee data for creation
+        const feeData = {
+          student: paymentForm.studentId, // Backend expects 'student' not 'studentId'
+          totalFee: parseFloat(paymentForm.amount),
+          feeType: paymentForm.feeType,
+          dueDate: paymentForm.dueDate,
+          status: paymentForm.status,
+          remarks: paymentForm.remarks || '',
+          academicYear: academicYear
+        };
+
+        // Add classId or className based on what was selected
+        if (paymentForm.classId) {
+          if (paymentForm.classId.startsWith('Class ')) {
+            feeData.className = paymentForm.classId;
+          } else {
+            feeData.classId = paymentForm.classId;
+          }
+        }
+
+        console.log('Creating fee with data:', feeData);
+        await feeAPI.createFee(feeData);
         alert('Payment recorded successfully!');
       }
       
@@ -91,7 +118,9 @@ const FeeDetails = () => {
       fetchData(); // Refresh data
     } catch (error) {
       console.error('Error saving payment:', error);
-      alert('Failed to save payment. Please try again.');
+      console.error('Error details:', error.response?.data);
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to save payment';
+      alert(`Failed to save payment: ${errorMsg}\n\nCheck console for details.`);
     }
   };
 
