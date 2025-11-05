@@ -220,11 +220,16 @@ const FeeDetails = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                 >
                   <option>All Fee Types</option>
+                  <option>Monthly Fee</option>
+                  <option>Quarterly Fee</option>
+                  <option>Yearly Fee</option>
                   <option>Tuition Fee</option>
+                  <option>Admission Fee</option>
                   <option>Library Fee</option>
                   <option>Lab Fee</option>
                   <option>Transport Fee</option>
                   <option>Exam Fee</option>
+                  <option>Other</option>
                 </select>
               </div>
             </div>
@@ -321,11 +326,16 @@ const FeeDetails = () => {
                     value={paymentForm.feeType} 
                     onChange={(e) => setPaymentForm({...paymentForm, feeType: e.target.value})}
                   >
+                    <option value="Monthly Fee">Monthly Fee</option>
+                    <option value="Quarterly Fee">Quarterly Fee</option>
+                    <option value="Yearly Fee">Yearly Fee</option>
                     <option value="Tuition Fee">Tuition Fee</option>
+                    <option value="Admission Fee">Admission Fee</option>
                     <option value="Library Fee">Library Fee</option>
                     <option value="Lab Fee">Lab Fee</option>
                     <option value="Transport Fee">Transport Fee</option>
                     <option value="Exam Fee">Exam Fee</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
                 <div>

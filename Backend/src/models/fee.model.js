@@ -18,7 +18,7 @@ const feeSchema = new Schema(
     // Additional fields for compatibility with frontend
     feeType: {
       type: String,
-      enum: ["Tuition Fee", "Library Fee", "Lab Fee", "Transport Fee", "Exam Fee", "Other"],
+      enum: ["Tuition Fee", "Library Fee", "Lab Fee", "Transport Fee", "Exam Fee", "Monthly Fee", "Quarterly Fee", "Yearly Fee", "Admission Fee", "Other"],
       default: "Tuition Fee"
     },
     classId: {

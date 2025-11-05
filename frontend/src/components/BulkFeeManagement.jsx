@@ -6,7 +6,7 @@ const BulkFeeManagement = () => {
   const [selectedClass, setSelectedClass] = useState('');
   const [loading, setLoading] = useState(false);
   const [feeData, setFeeData] = useState({
-    feeType: 'Monthly',
+    feeType: 'Monthly Fee',
     amount: '',
     lastDate: '',
     feePenalty: '',
@@ -92,7 +92,7 @@ const BulkFeeManagement = () => {
       
       // Reset form
       setFeeData({
-        feeType: 'Monthly',
+        feeType: 'Monthly Fee',
         amount: '',
         lastDate: '',
         feePenalty: '',
@@ -163,12 +163,15 @@ const BulkFeeManagement = () => {
               required
               className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
             >
-              <option value="Monthly">Monthly Fee</option>
-              <option value="Quarterly">Quarterly Fee</option>
-              <option value="Yearly">Yearly Fee</option>
-              <option value="Admission">Admission Fee</option>
-              <option value="Exam">Exam Fee</option>
-              <option value="Transport">Transport Fee</option>
+              <option value="Monthly Fee">Monthly Fee</option>
+              <option value="Quarterly Fee">Quarterly Fee</option>
+              <option value="Yearly Fee">Yearly Fee</option>
+              <option value="Tuition Fee">Tuition Fee</option>
+              <option value="Admission Fee">Admission Fee</option>
+              <option value="Library Fee">Library Fee</option>
+              <option value="Lab Fee">Lab Fee</option>
+              <option value="Transport Fee">Transport Fee</option>
+              <option value="Exam Fee">Exam Fee</option>
               <option value="Other">Other</option>
             </select>
           </div>
