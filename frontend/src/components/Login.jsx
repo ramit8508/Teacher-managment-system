@@ -162,8 +162,6 @@ const Login = () => {
             <p className="text-gray-600">• For ALL teachers and admins</p>
             <p className="text-gray-600">• Use your registered email and password</p>
             <p className="font-medium mt-2">👑 Admin Quick Login (Purple Button Below):</p>
-            <p className="text-gray-600">• ONLY for Super Admin (admin@school.com)</p>
-            <p className="text-gray-600">• And authorized admin (ramitgoyal8508@gmail.com)</p>
           </div>
           <p className="text-xs text-gray-500 mt-2 italic">
             Contact administrator to create a new account
