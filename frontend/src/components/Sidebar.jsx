@@ -13,8 +13,11 @@ const Sidebar = ({ onMenuChange, onLogout, isOpen, setIsOpen }) => {
     { id: 3, name: 'Attendance', icon: '📋', roles: ['teacher'] },
     { id: 4, name: 'Fee Details', icon: '💰', roles: ['teacher'] },
     { id: 5, name: 'Examination Scores', icon: '📊', roles: ['teacher'] },
-    { id: 6, name: 'Manage Teachers', icon: '👨‍🏫', roles: ['admin'] },
-    { id: 7, name: 'Manage Students', icon: '👥', roles: ['admin'] },
+    { id: 6, name: 'Bulk Fee Management', icon: '💵', roles: ['teacher', 'admin'] },
+    { id: 7, name: 'Bulk Exam Editor', icon: '📝', roles: ['teacher', 'admin'] },
+    { id: 8, name: 'Class Promotion', icon: '🎓', roles: ['teacher', 'admin'] },
+    { id: 9, name: 'Manage Teachers', icon: '👨‍🏫', roles: ['admin'] },
+    { id: 10, name: 'Manage Students', icon: '👥', roles: ['admin'] },
   ];
 
   // Filter menu items based on user role

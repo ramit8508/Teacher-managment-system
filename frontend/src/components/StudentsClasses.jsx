@@ -15,6 +15,8 @@ const StudentsClasses = () => {
   
   const [activeTab, setActiveTab] = useState('Students');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploadFile, setUploadFile] = useState(null);
@@ -146,6 +148,53 @@ const StudentsClasses = () => {
     } catch (error) {
       console.error('Error deleting student:', error);
       const errorMessage = error.response?.data?.message || 'Failed to delete student. Please try again.';
+      alert(errorMessage);
+    }
+  };
+
+  const handleEditStudent = (student) => {
+    setEditingStudent(student);
+    setFormData({
+      fullName: student.fullName,
+      email: student.email,
+      role: 'student',
+      phone: student.phone || '',
+      address: student.address || '',
+      classId: student.classId || '',
+      className: student.className || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateStudent = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const updateData = {
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        classId: formData.classId || null
+      };
+
+      await authAPI.updateUser(editingStudent._id, updateData);
+      setShowEditModal(false);
+      setEditingStudent(null);
+      setFormData({
+        fullName: '',
+        email: '',
+        role: 'student',
+        phone: '',
+        address: '',
+        classId: '',
+        className: ''
+      });
+      fetchData();
+      alert('Student updated successfully!');
+    } catch (error) {
+      console.error('Error updating student:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to update student. Please try again.';
       alert(errorMessage);
     }
   };
@@ -623,6 +672,125 @@ const StudentsClasses = () => {
         </div>
       )}
 
+      {/* Edit Student Modal */}
+      {showEditModal && editingStudent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg border-2 border-orange-300 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-orange-100 px-6 py-4 border-b-2 border-orange-300">
+              <h2 className="text-xl font-bold text-orange-800">Edit Student</h2>
+            </div>
+            <form onSubmit={handleUpdateStudent} className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                  <input
+                    type="text"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
+                    placeholder="Enter full name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
+                    placeholder="Enter email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Class</label>
+                  <select
+                    name="classId"
+                    value={formData.classId || formData.className}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
+                  >
+                    <option value="">Select Class (Optional)</option>
+                    {/* Predefined class options: Class 1-10 with sections A-D */}
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+                      ['A', 'B', 'C', 'D'].map(section => (
+                        <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
+                          Class {classNum} - Section {section}
+                        </option>
+                      ))
+                    )}
+                    {/* Also show database classes if any */}
+                    {classes.length > 0 && (
+                      <optgroup label="─────────────────">
+                        {classes.map((cls) => (
+                          <option key={cls._id} value={cls._id}>
+                            {cls.name} - {cls.subject}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Address</label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
+                    placeholder="Enter complete address"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-4 mt-6">
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-orange-100 text-orange-700 rounded-md border border-orange-300 font-medium hover:bg-orange-200 transition-colors flex items-center gap-2"
+                >
+                  <span>💾</span>
+                  <span>Update Student</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingStudent(null);
+                    setFormData({
+                      fullName: '',
+                      email: '',
+                      role: 'student',
+                      phone: '',
+                      address: '',
+                      classId: '',
+                      className: ''
+                    });
+                  }}
+                  className="px-6 py-2 bg-gray-100 text-gray-700 rounded-md border border-gray-300 font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Students List */}
       {!loading && (
         <div className="bg-white rounded-lg border border-gray-300 overflow-hidden">
@@ -664,14 +832,24 @@ const StudentsClasses = () => {
                       </td>
                       {isTeacherOrAdmin && (
                         <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => handleDeleteStudent(student._id, student.fullName)}
-                            className="px-3 py-1 bg-red-100 text-red-700 rounded-md border border-red-300 font-medium hover:bg-red-200 transition-colors text-sm flex items-center gap-1 mx-auto"
-                            title="Delete Student"
-                          >
-                            <span>🗑️</span>
-                            <span>Delete</span>
-                          </button>
+                          <div className="flex gap-2 justify-center">
+                            <button
+                              onClick={() => handleEditStudent(student)}
+                              className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md border border-blue-300 font-medium hover:bg-blue-200 transition-colors text-sm flex items-center gap-1"
+                              title="Edit Student"
+                            >
+                              <span>✏️</span>
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteStudent(student._id, student.fullName)}
+                              className="px-3 py-1 bg-red-100 text-red-700 rounded-md border border-red-300 font-medium hover:bg-red-200 transition-colors text-sm flex items-center gap-1"
+                              title="Delete Student"
+                            >
+                              <span>🗑️</span>
+                              <span>Delete</span>
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>

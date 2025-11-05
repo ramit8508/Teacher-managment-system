@@ -9,6 +9,9 @@ import StudentsClasses from '../components/StudentsClasses';
 import Attendance from '../components/Attendance';
 import FeeDetails from '../components/FeeDetails';
 import ExaminationScores from '../components/ExaminationScores';
+import BulkFeeManagement from '../components/BulkFeeManagement';
+import BulkExamEditor from '../components/BulkExamEditor';
+import ClassPromotion from '../components/ClassPromotion';
 
 const Dashboard = ({ onLogout }) => {
   const { user } = useAuth();
@@ -25,6 +28,12 @@ const Dashboard = ({ onLogout }) => {
           return <AdminTeachers />;
         case 'Manage Students':
           return <AdminStudents />;
+        case 'Bulk Fee Management':
+          return <BulkFeeManagement />;
+        case 'Bulk Exam Editor':
+          return <BulkExamEditor />;
+        case 'Class Promotion':
+          return <ClassPromotion />;
         default:
           return <AdminDashboard />;
       }
@@ -46,6 +55,12 @@ const Dashboard = ({ onLogout }) => {
       case 'Examination Scores':
       case 'examination':
         return <ExaminationScores />;
+      case 'Bulk Fee Management':
+        return <BulkFeeManagement />;
+      case 'Bulk Exam Editor':
+        return <BulkExamEditor />;
+      case 'Class Promotion':
+        return <ClassPromotion />;
       default:
         return <DashboardContent onMenuChange={setCurrentPage} />;
     }

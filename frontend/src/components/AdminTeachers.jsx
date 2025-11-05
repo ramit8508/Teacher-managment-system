@@ -7,6 +7,14 @@ const AdminTeachers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTeacher, setNewTeacher] = useState({
+    fullName: '',
+    email: '',
+    username: '',
+    password: '',
+    role: 'teacher',
+  });
 
   useEffect(() => {
     fetchTeachers();
@@ -65,6 +73,30 @@ const AdminTeachers = () => {
     }
   };
 
+  const handleAddTeacher = async () => {
+    try {
+      if (!newTeacher.fullName || !newTeacher.email || !newTeacher.username || !newTeacher.password) {
+        alert('Please fill all fields');
+        return;
+      }
+      
+      await authAPI.register(newTeacher);
+      alert('Teacher added successfully!');
+      setShowAddModal(false);
+      setNewTeacher({
+        fullName: '',
+        email: '',
+        username: '',
+        password: '',
+        role: 'teacher',
+      });
+      fetchTeachers();
+    } catch (error) {
+      console.error('Error adding teacher:', error);
+      alert(error.response?.data?.message || 'Failed to add teacher');
+    }
+  };
+
   const handleDelete = async (teacherId) => {
     if (!confirm('Are you sure you want to delete this teacher? This action cannot be undone!')) return;
 
@@ -88,8 +120,19 @@ const AdminTeachers = () => {
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Manage Teachers</h1>
-        <p className="text-sm sm:text-base text-gray-600">View, edit, block, or remove teachers</p>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Manage Teachers</h1>
+            <p className="text-sm sm:text-base text-gray-600">View, edit, block, or remove teachers</p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <span>➕</span>
+            <span className="hidden sm:inline">Add Teacher</span>
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -265,6 +308,82 @@ const AdminTeachers = () => {
               </button>
               <button
                 onClick={() => setShowEditModal(false)}
+                className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Teacher Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Add New Teacher</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={newTeacher.fullName}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, fullName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                  placeholder="Enter full name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={newTeacher.email}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                  placeholder="Enter email"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input
+                  type="text"
+                  value={newTeacher.username}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, username: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                  placeholder="Enter username"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  value={newTeacher.password}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                  placeholder="Enter password"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select
+                  value={newTeacher.role}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, role: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="teacher">Teacher</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleAddTeacher}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+              >
+                Add Teacher
+              </button>
+              <button
+                onClick={() => setShowAddModal(false)}
                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-md hover:bg-gray-300"
               >
                 Cancel

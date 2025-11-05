@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-const Login = ({ setIsLogin }) => {
+const Login = () => {
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -121,7 +121,7 @@ const Login = ({ setIsLogin }) => {
             ℹ️ Use your registered credentials to login
           </p>
           <p className="text-xs text-gray-600 mt-1">
-            Don't have an account? Click "Signup" tab above
+            Contact administrator to create a new account
           </p>
         </div>
       </div>
