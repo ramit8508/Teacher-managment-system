@@ -42,20 +42,32 @@ const BulkFeeManagement = () => {
       
       if (selectedClass.startsWith('Class')) {
         // Predefined class - fetch all students with this className
+        console.log('Fetching students for predefined class:', selectedClass);
         const response = await authAPI.getAllUsers({ role: 'student' });
         const allStudents = response.data.data || [];
+        console.log('All students:', allStudents.length);
         students = allStudents.filter(s => s.className === selectedClass);
+        console.log('Filtered students for', selectedClass, ':', students.length);
       } else {
         // Database class - get students from class roster
         const classDetails = classes.find(c => c._id === selectedClass);
         students = classDetails?.students || [];
+        console.log('Students from database class:', students.length);
       }
 
       if (students.length === 0) {
-        alert('No students in this class');
+        alert(`No students found in ${selectedClass}. Please add students to this class first.`);
         setLoading(false);
         return;
       }
+
+      console.log('Creating fees for', students.length, 'students');
+
+      // Get current academic year (e.g., "2024-2025")
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      const academicYear = currentMonth >= 3 ? `${currentYear}-${currentYear + 1}` : `${currentYear - 1}-${currentYear}`;
 
       // Create fee record for each student
       const feePromises = students.map(student => 
@@ -64,15 +76,19 @@ const BulkFeeManagement = () => {
           feeType: feeData.feeType,
           totalFee: parseInt(feeData.amount),
           dueDate: feeData.lastDate,
-          penalty: parseInt(feeData.feePenalty) || 0,
-          penaltyPeriod: parseInt(feeData.penaltyPeriod) || 0,
+          academicYear: academicYear,
           status: 'pending',
+          // Add className or classId based on selected class type
+          ...(selectedClass.startsWith('Class') 
+            ? { className: selectedClass } 
+            : { classId: selectedClass }
+          )
         })
       );
 
       await Promise.all(feePromises);
 
-      alert(`Fee request applied to ${students.length} students successfully!`);
+      alert(`✅ Fee request applied to ${students.length} student(s) successfully!`);
       
       // Reset form
       setFeeData({
@@ -86,7 +102,9 @@ const BulkFeeManagement = () => {
 
     } catch (error) {
       console.error('Error creating bulk fees:', error);
-      alert('Failed to create fee requests. Please try again.');
+      console.error('Error details:', error.response?.data);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create fee requests';
+      alert(`❌ Error: ${errorMessage}\n\nPlease check console for details.`);
     } finally {
       setLoading(false);
     }
