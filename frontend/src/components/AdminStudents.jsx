@@ -373,18 +373,53 @@ const AdminStudents = () => {
                 <div className="bg-purple-50 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-800 mb-2">📊 Exam Scores ({studentDetails.exams.length})</h3>
                   {studentDetails.exams.length > 0 ? (
-                    <div className="space-y-2">
-                      {studentDetails.exams.slice(0, 3).map((exam) => (
-                        <div key={exam._id} className="flex justify-between text-sm">
-                          <span className="text-gray-700">{exam.examName}</span>
-                          <span className="font-medium text-purple-600">
-                            {exam.marksObtained}/{exam.totalMarks}
-                          </span>
-                        </div>
-                      ))}
-                      {studentDetails.exams.length > 3 && (
-                        <p className="text-xs text-gray-500">+ {studentDetails.exams.length - 3} more</p>
-                      )}
+                    <div className="space-y-3">
+                      {studentDetails.exams.map((exam) => {
+                        // Calculate total marks from subjects
+                        const totalObtained = exam.subjects?.reduce((sum, sub) => sum + (sub.obtainedMarks || 0), 0) || 0;
+                        const totalMarks = exam.subjects?.reduce((sum, sub) => sum + (sub.totalMarks || 0), 0) || 0;
+                        const percentage = totalMarks > 0 ? ((totalObtained / totalMarks) * 100).toFixed(1) : 0;
+                        
+                        return (
+                          <div key={exam._id} className="bg-white rounded-md p-3 border border-purple-200">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <p className="font-semibold text-gray-800 text-sm">{exam.examName}</p>
+                                <p className="text-xs text-gray-500">{exam.examType} • {new Date(exam.examDate).toLocaleDateString()}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-purple-600">{totalObtained}/{totalMarks}</p>
+                                <p className="text-xs text-gray-600">{percentage}%</p>
+                              </div>
+                            </div>
+                            
+                            {/* Subject-wise breakdown */}
+                            {exam.subjects && exam.subjects.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-purple-100 space-y-1">
+                                {exam.subjects.map((subject, idx) => (
+                                  <div key={idx} className="flex justify-between text-xs">
+                                    <span className="text-gray-600">{subject.subjectName}</span>
+                                    <span className="font-medium text-gray-700">
+                                      {subject.obtainedMarks}/{subject.totalMarks}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            
+                            {/* Overall grade */}
+                            {exam.overallGrade && (
+                              <div className="mt-2 pt-2 border-t border-purple-100">
+                                <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                  exam.resultStatus === 'Pass' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                  Grade: {exam.overallGrade} • {exam.resultStatus}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500">No exam records</p>
