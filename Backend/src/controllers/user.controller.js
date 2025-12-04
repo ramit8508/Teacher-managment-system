@@ -56,7 +56,7 @@ const registerUser = asyncHandler(async (req, res) => {
     address: address || "",
     subject: subject || "",
     classId: classId || null,
-    className: className || "",
+    className: className ? className.trim().toUpperCase() : "", // Normalize to uppercase (1a -> 1A)
     createdBy: createdBy
   });
 
@@ -166,18 +166,47 @@ const getAllUsers = asyncHandler(async (req, res) => {
   let query = {};
   if (role) query.role = role;
   
-  // If the logged-in user is a teacher (not admin), only show students they created
+  // ONLY filter for teachers, admins see ALL students
   if (req.user && req.user.role === 'teacher' && role === 'student') {
-    query.createdBy = req.user._id;
-    console.log('🔒 Filtering students for teacher:', req.user.fullName, 'ID:', req.user._id);
+    const { ClassAssignment } = await import("../models/classAssignment.model.js");
+    
+    // Find classes assigned to this teacher
+    const assignments = await ClassAssignment.find({ 
+      assignedTeachers: req.user._id 
+    }).select('className');
+    
+    const assignedClassNames = assignments.map(a => a.className);
+    
+    console.log('🔒 Teacher:', req.user.fullName, 'assigned to classes:', assignedClassNames);
+    
+    // Filter students: either created by this teacher OR in assigned classes
+    query.$and = [
+      { role: 'student' },
+      {
+        $or: [
+          { createdBy: req.user._id },
+          { className: { $in: assignedClassNames } }
+        ]
+      }
+    ];
   }
   
   if (search) {
-    query.$or = [
-      { fullName: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
-      { username: { $regex: search, $options: 'i' } }
-    ];
+    if (!query.$and) {
+      query.$or = [
+        { fullName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { username: { $regex: search, $options: 'i' } }
+      ];
+    } else {
+      query.$and.push({
+        $or: [
+          { fullName: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { username: { $regex: search, $options: 'i' } }
+        ]
+      });
+    }
   }
 
   const users = await User.find(query)
@@ -247,7 +276,7 @@ const updateUser = asyncHandler(async (req, res) => {
   
   // Handle classId and className (allow null values to clear them)
   if (classId !== undefined) updateData.classId = classId;
-  if (className !== undefined) updateData.className = className;
+  if (className !== undefined) updateData.className = className ? className.trim().toUpperCase() : ""; // Normalize to uppercase
 
   const updatedUser = await User.findByIdAndUpdate(
     id,
@@ -280,6 +309,83 @@ const deleteUser = asyncHandler(async (req, res) => {
   );
 });
 
+const bulkRegisterUsers = asyncHandler(async (req, res) => {
+  const { students } = req.body;
+
+  if (!students || !Array.isArray(students) || students.length === 0) {
+    throw new ApiError(400, "Students array is required");
+  }
+
+  const results = {
+    successful: 0,
+    failed: 0,
+    errors: []
+  };
+
+  for (let i = 0; i < students.length; i++) {
+    const student = students[i];
+    try {
+      // Validate required fields
+      if (!student.email || !student.fullName || !student.password) {
+        results.failed++;
+        results.errors.push({
+          index: i + 1,
+          email: student.email || 'N/A',
+          error: 'Missing required fields (email, fullName, password)'
+        });
+        continue;
+      }
+
+      // Auto-generate username if not provided
+      if (!student.username) {
+        student.username = student.email.split('@')[0].toLowerCase();
+      }
+
+      // Check if user already exists
+      const existedUser = await User.findOne({
+        $or: [{ username: student.username }, { email: student.email }]
+      });
+
+      if (existedUser) {
+        results.failed++;
+        results.errors.push({
+          index: i + 1,
+          email: student.email,
+          error: 'User already exists'
+        });
+        continue;
+      }
+
+      // Create user
+      await User.create({
+        username: student.username.toLowerCase(),
+        email: student.email,
+        fullName: student.fullName,
+        password: student.password,
+        role: student.role || 'student',
+        phone: student.phone || '',
+        address: student.address || '',
+        className: student.className ? student.className.trim().toUpperCase() : '', // Normalize to uppercase
+        classId: student.classId || null,
+        createdBy: req.user?._id || null
+      });
+
+      results.successful++;
+    } catch (error) {
+      results.failed++;
+      results.errors.push({
+        index: i + 1,
+        email: student.email || 'N/A',
+        error: error.message
+      });
+    }
+  }
+
+  return res.status(201).json(
+    new ApiResponse(201, results, `Bulk registration completed: ${results.successful} successful, ${results.failed} failed`)
+  );
+});
+
 export {
   registerUser,
   loginUser,
@@ -288,5 +394,6 @@ export {
   getAllUsers,
   getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
+  bulkRegisterUsers
 };

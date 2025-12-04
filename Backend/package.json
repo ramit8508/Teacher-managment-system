@@ -8,7 +8,8 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "create-admin": "node src/scripts/createAdmin.js",
-    "create-second-admin": "node src/scripts/createSecondAdmin.js"
+    "create-second-admin": "node src/scripts/createSecondAdmin.js",
+    "normalize-classes": "node src/scripts/normalizeClassNames.js"
   },
   "dependencies": {
     "express": "^5.1.0",

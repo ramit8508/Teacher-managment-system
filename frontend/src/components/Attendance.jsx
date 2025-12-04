@@ -43,14 +43,16 @@ const Attendance = () => {
       const studentsResponse = await authAPI.getAllUsers({ role: 'student' });
       const allStudents = studentsResponse.data.data || [];
       
-      // Check if selectedClass is a predefined class (string) or database class (ObjectId)
-      const isPredefinedClass = selectedClass.startsWith('Class ');
+      // Check if selectedClass matches the new format (1A-12D) or is a database ObjectId
+      const isPredefinedClass = /^\d{1,2}[A-D]$/i.test(selectedClass);
       
       // Filter students based on selected class
       let filteredStudents;
       if (isPredefinedClass) {
-        // Filter by className for predefined classes
-        filteredStudents = allStudents.filter(student => student.className === selectedClass);
+        // Filter by className for predefined classes (case-insensitive comparison)
+        filteredStudents = allStudents.filter(student => 
+          student.className && student.className.toUpperCase() === selectedClass.toUpperCase()
+        );
       } else {
         // Filter by classId for database classes
         filteredStudents = allStudents.filter(student => student.classId?._id === selectedClass);
@@ -126,8 +128,8 @@ const Attendance = () => {
     try {
       setLoading(true);
       
-      // Determine if it's a predefined class or database class
-      const isPredefinedClass = selectedClass.startsWith('Class ');
+      // Determine if it's a predefined class (1A-12D format) or database class
+      const isPredefinedClass = /^\d{1,2}[A-D]$/i.test(selectedClass);
       
       // Create attendance records for each student
       const attendanceData = students.map(student => {
@@ -260,12 +262,15 @@ const Attendance = () => {
                   className="w-full px-4 py-2 border-2 border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-white"
                 >
                   <option value="">-- Select Class --</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
-                    ['A', 'B', 'C', 'D'].map(section => (
-                      <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                        Class {classNum} - Section {section}
-                      </option>
-                    ))
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
+                    ['A', 'B', 'C', 'D'].map(section => {
+                      const className = `${classNum}${section}`;
+                      return (
+                        <option key={className} value={className}>
+                          {className}
+                        </option>
+                      );
+                    })
                   )}
                   {classes.length > 0 && (
                     <optgroup label="─── Database Classes ───">
@@ -397,13 +402,16 @@ const Attendance = () => {
               disabled={loading}
             >
               <option value="">-- Select Class --</option>
-              {/* Predefined class options: Class 1-10 with sections A-D */}
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
-                ['A', 'B', 'C', 'D'].map(section => (
-                  <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                    Class {classNum} - Section {section}
-                  </option>
-                ))
+              {/* Predefined class options: 1A-12D format */}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
+                ['A', 'B', 'C', 'D'].map(section => {
+                  const className = `${classNum}${section}`;
+                  return (
+                    <option key={className} value={className}>
+                      {className}
+                    </option>
+                  );
+                })
               )}
               {/* Also show database classes if any */}
               {classes.length > 0 && (

@@ -92,12 +92,30 @@ const DashboardContent = ({ onMenuChange }) => {
     { id: 4, icon: '⚠️', number: stats.pendingFees, label: 'Pending Fees', color: 'text-red-600' },
   ];
 
-  const quickActions = [
-    { id: 1, icon: '📋', text: "Mark Today's Attendance", action: 'attendance' },
-    { id: 2, icon: '💰', text: 'Record Fee Payment', action: 'fees' },
-    { id: 3, icon: '📊', text: 'Enter Exam Scores', action: 'examination' },
-    { id: 4, icon: '👤', text: 'Add New Student', action: 'students' },
-  ];
+  // Quick actions based on user role
+  const getQuickActions = () => {
+    const baseActions = [
+      { id: 1, icon: '📋', text: "Mark Today's Attendance", action: 'attendance' },
+      { id: 2, icon: '💰', text: 'Record Fee Payment', action: 'fees' },
+      { id: 3, icon: '📊', text: 'Enter Exam Scores', action: 'examination' },
+      { id: 4, icon: '👤', text: 'Manage Students', action: 'students' },
+    ];
+
+    // Admin-specific actions
+    if (user?.role === 'admin') {
+      return [
+        ...baseActions,
+        { id: 5, icon: '👥', text: 'Manage Classes', action: 'classes' },
+        { id: 6, icon: '📥', text: 'Bulk Add Students', action: 'Bulk Add Students' },
+        { id: 7, icon: '🔗', text: 'Class-Teacher Assignment', action: 'Class-Teacher Assignment' },
+        { id: 8, icon: '💵', text: 'Bulk Fee Management', action: 'bulkfee' },
+      ];
+    }
+
+    return baseActions;
+  };
+
+  const quickActions = getQuickActions();
 
   const handleQuickAction = (action) => {
     if (onMenuChange) {
@@ -156,7 +174,7 @@ const DashboardContent = ({ onMenuChange }) => {
         {/* Quick Actions */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
           <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-4">Quick Actions</h2>
-          <div className="space-y-2 sm:space-y-3">
+          <div className="grid grid-cols-1 gap-2 sm:gap-3">
             {quickActions.map((action) => (
               <button
                 key={action.id}

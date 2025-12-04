@@ -93,7 +93,8 @@ const FeeDetails = () => {
 
         // Add classId or className based on what was selected
         if (paymentForm.classId) {
-          if (paymentForm.classId.startsWith('Class ')) {
+          // Check if it's predefined class format (1A, 2B, etc.) or database ID
+          if (/^\d{1,2}[A-D]$/.test(paymentForm.classId)) {
             feeData.className = paymentForm.classId;
           } else {
             feeData.classId = paymentForm.classId;
@@ -223,11 +224,11 @@ const FeeDetails = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                 >
                   <option>All Classes</option>
-                  {/* Predefined class options: Class 1-10 with sections A-D */}
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+                  {/* Predefined class options: 1A-12D */}
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
                     ['A', 'B', 'C', 'D'].map(section => (
-                      <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                        Class {classNum} - Section {section}
+                      <option key={`${classNum}${section}`} value={`${classNum}${section}`}>
+                        {classNum}{section}
                       </option>
                     ))
                   )}
@@ -285,14 +286,14 @@ const FeeDetails = () => {
                     onChange={(e) => setPaymentForm({...paymentForm, classId: e.target.value, studentId: ''})}
                   >
                     <option value="">-- Select Class First --</option>
-                    {/* Predefined class options: Class 1-10 with sections A-D */}
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
-                      ['A', 'B', 'C', 'D'].map(section => (
-                        <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                          Class {classNum} - Section {section}
+                    {/* Predefined class options: 1A-12D */}
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
+                        ['A', 'B', 'C', 'D'].map(section => (
+                        <option key={`${classNum}${section}`} value={`${classNum}${section}`}>
+                          {classNum}{section}
                         </option>
-                      ))
-                    )}
+                        ))
+                      )}
                     {/* Also show database classes if any */}
                     {classes.length > 0 && (
                       <optgroup label="─── Database Classes ───">
@@ -318,8 +319,8 @@ const FeeDetails = () => {
                     <option value="">-- Select Student --</option>
                     {students
                       .filter(student => {
-                        // Check if classId is a predefined class or database class
-                        const isPredefinedClass = paymentForm.classId.startsWith('Class ');
+                        // Check if classId is a predefined class (1A, 2B) or database class (ObjectId)
+                        const isPredefinedClass = /^\d{1,2}[A-D]$/.test(paymentForm.classId);
                         if (isPredefinedClass) {
                           return student.className === paymentForm.classId;
                         } else {

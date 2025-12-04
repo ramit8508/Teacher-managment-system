@@ -7,7 +7,8 @@ import {
   getAllUsers,
   getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
+  bulkRegisterUsers
 } from "../controllers/user.controller.js";
 import { verifyJWT, verifyRole, optionalJWT } from "../middlewares/auth.middleware.js";
 
@@ -15,6 +16,7 @@ const router = Router();
 
 // Register route with optional JWT - allows both initial registration and adding students after login
 router.route("/register").post(optionalJWT, registerUser);
+router.route("/bulk-register").post(verifyJWT, verifyRole("admin"), bulkRegisterUsers);
 router.route("/login").post(loginUser);
 
 // Secured routes

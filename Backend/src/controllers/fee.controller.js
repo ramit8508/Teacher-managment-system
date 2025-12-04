@@ -54,16 +54,29 @@ const getFeesByStudent = asyncHandler(async (req, res) => {
 const getAllFees = asyncHandler(async (req, res) => {
   const { status } = req.query;
 
-  // If the logged-in user is a teacher (not admin), only show fees for students they created
+  // ONLY filter for teachers, admins see ALL fees
   let studentIds = null;
   if (req.user && req.user.role === 'teacher') {
-    // First, get all students created by this teacher
     const { User } = await import("../models/user.model.js");
-    const teacherStudents = await User.find({ 
-      role: 'student', 
-      createdBy: req.user._id 
-    }).select('_id');
+    const { ClassAssignment } = await import("../models/classAssignment.model.js");
     
+    // Find classes assigned to this teacher
+    const assignments = await ClassAssignment.find({ 
+      assignedTeachers: req.user._id 
+    }).select('className');
+    
+    const assignedClassNames = assignments.map(a => a.className);
+    
+    // Get students from assigned classes OR students created by this teacher
+    const query = {
+      role: 'student',
+      $or: [
+        { createdBy: req.user._id },
+        { className: { $in: assignedClassNames } }
+      ]
+    };
+    
+    const teacherStudents = await User.find(query).select('_id');
     studentIds = teacherStudents.map(s => s._id);
     
     // If teacher has no students, return empty array

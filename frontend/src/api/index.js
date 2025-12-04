@@ -3,6 +3,7 @@ import api from './axios';
 // Auth APIs
 export const authAPI = {
   register: (userData) => api.post('/users/register', userData),
+  bulkRegister: (studentsData) => api.post('/users/bulk-register', { students: studentsData }),
   login: (credentials) => api.post('/users/login', credentials),
   logout: () => api.post('/users/logout'),
   getCurrentUser: () => api.get('/users/current-user'),
@@ -20,6 +21,9 @@ export const classAPI = {
   updateClass: (id, classData) => api.put(`/classes/${id}`, classData),
   deleteClass: (id) => api.delete(`/classes/${id}`),
   addStudentToClass: (id, studentId) => api.post(`/classes/${id}/add-student`, { studentId }),
+  getClassAssignments: () => api.get('/classes/assignments'),
+  assignTeachersToClass: (className, teacherIds) => api.post('/classes/assignments/assign', { className, teacherIds }),
+  getAssignmentByClassName: (className) => api.get(`/classes/assignments/${className}`),
 };
 
 // Attendance APIs

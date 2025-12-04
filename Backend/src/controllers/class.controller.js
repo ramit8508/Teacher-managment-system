@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Class } from "../models/class.model.js";
+import { ClassAssignment } from "../models/classAssignment.model.js";
 
 const createClass = asyncHandler(async (req, res) => {
   const { className, section, subject, schedule } = req.body;
@@ -104,11 +105,68 @@ const addStudentToClass = asyncHandler(async (req, res) => {
   );
 });
 
+const assignTeachersToClass = asyncHandler(async (req, res) => {
+  const { className, teacherIds } = req.body;
+
+  if (!className || !Array.isArray(teacherIds)) {
+    throw new ApiError(400, "className and teacherIds array are required");
+  }
+
+  // Find or create assignment
+  let assignment = await ClassAssignment.findOne({ className });
+
+  if (assignment) {
+    assignment.assignedTeachers = teacherIds;
+    await assignment.save();
+  } else {
+    assignment = await ClassAssignment.create({
+      className,
+      assignedTeachers: teacherIds
+    });
+  }
+
+  const populatedAssignment = await ClassAssignment.findById(assignment._id)
+    .populate("assignedTeachers", "fullName email subject");
+
+  return res.status(200).json(
+    new ApiResponse(200, populatedAssignment, "Teachers assigned successfully")
+  );
+});
+
+const getClassAssignments = asyncHandler(async (req, res) => {
+  const assignments = await ClassAssignment.find()
+    .populate("assignedTeachers", "fullName email subject");
+
+  return res.status(200).json(
+    new ApiResponse(200, assignments, "Assignments fetched successfully")
+  );
+});
+
+const getAssignmentByClassName = asyncHandler(async (req, res) => {
+  const { className } = req.params;
+
+  const assignment = await ClassAssignment.findOne({ className })
+    .populate("assignedTeachers", "fullName email subject");
+
+  if (!assignment) {
+    return res.status(200).json(
+      new ApiResponse(200, { className, assignedTeachers: [] }, "No assignment found for this class")
+    );
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, assignment, "Assignment fetched successfully")
+  );
+});
+
 export {
   createClass,
   getClasses,
   getClassById,
   updateClass,
   deleteClass,
-  addStudentToClass
+  addStudentToClass,
+  assignTeachersToClass,
+  getClassAssignments,
+  getAssignmentByClassName
 };

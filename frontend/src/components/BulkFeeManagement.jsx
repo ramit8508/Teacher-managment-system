@@ -40,13 +40,18 @@ const BulkFeeManagement = () => {
       // Get students based on class type (predefined or database)
       let students = [];
       
-      if (selectedClass.startsWith('Class')) {
+      // Check if it's predefined class format (1A-12D) or database class (ObjectId)
+      const isPredefinedClass = /^\d{1,2}[A-D]$/i.test(selectedClass);
+      
+      if (isPredefinedClass) {
         // Predefined class - fetch all students with this className
         console.log('Fetching students for predefined class:', selectedClass);
         const response = await authAPI.getAllUsers({ role: 'student' });
         const allStudents = response.data.data || [];
         console.log('All students:', allStudents.length);
-        students = allStudents.filter(s => s.className === selectedClass);
+        students = allStudents.filter(s => 
+          s.className && s.className.toUpperCase() === selectedClass.toUpperCase()
+        );
         console.log('Filtered students for', selectedClass, ':', students.length);
       } else {
         // Database class - get students from class roster
@@ -79,7 +84,7 @@ const BulkFeeManagement = () => {
           academicYear: academicYear,
           status: 'pending',
           // Add className or classId based on selected class type
-          ...(selectedClass.startsWith('Class') 
+          ...(isPredefinedClass 
             ? { className: selectedClass } 
             : { classId: selectedClass }
           )
@@ -131,13 +136,16 @@ const BulkFeeManagement = () => {
               className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
             >
               <option value="">-- Select a Class --</option>
-              {/* Predefined class options: Class 1-10 with sections A-D */}
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
-                ['A', 'B', 'C', 'D'].map(section => (
-                  <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                    Class {classNum} - Section {section}
-                  </option>
-                ))
+              {/* Predefined class options: 1A-12D format */}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
+                ['A', 'B', 'C', 'D'].map(section => {
+                  const className = `${classNum}${section}`;
+                  return (
+                    <option key={className} value={className}>
+                      {className}
+                    </option>
+                  );
+                })
               )}
               {/* Also show database classes if any */}
               {classes.length > 0 && (

@@ -29,7 +29,6 @@ const StudentsClasses = () => {
     role: 'student',
     phone: '',
     address: '',
-    classId: '',
     className: ''
   });
 
@@ -83,21 +82,10 @@ const StudentsClasses = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
-    // If changing class, handle both classId and className
-    if (name === 'classId') {
-      // Check if it's a predefined class (string) or database class (ObjectId)
-      const isPredefinedClass = value.startsWith('Class ');
-      setFormData({
-        ...formData,
-        classId: isPredefinedClass ? '' : value, // Set empty if predefined
-        className: isPredefinedClass ? value : '' // Set className if predefined
-      });
-    } else {
-      setFormData({
-        ...formData,
-        [name]: value
-      });
-    }
+    setFormData({
+      ...formData,
+      [name]: value
+    });
   };
 
   const handleAddStudent = async (e) => {
@@ -110,7 +98,8 @@ const StudentsClasses = () => {
       const studentData = {
         ...formData,
         username: username,
-        password: 'Student@123' // Default password for all students
+        password: 'Student@123', // Default password for all students
+        className: formData.className ? formData.className.trim().toUpperCase() : '' // Normalize to uppercase
       };
       
       console.log('Sending student data:', studentData); // Debug log
@@ -123,7 +112,6 @@ const StudentsClasses = () => {
         role: 'student',
         phone: '',
         address: '',
-        classId: '',
         className: ''
       });
       // Refresh data after adding student
@@ -175,7 +163,8 @@ const StudentsClasses = () => {
         email: formData.email,
         phone: formData.phone,
         address: formData.address,
-        classId: formData.classId || null
+        classId: formData.classId || null,
+        className: formData.className ? formData.className.trim().toUpperCase() : '' // Normalize to uppercase
       };
 
       await authAPI.updateUser(editingStudent._id, updateData);
@@ -187,7 +176,6 @@ const StudentsClasses = () => {
         role: 'student',
         phone: '',
         address: '',
-        classId: '',
         className: ''
       });
       fetchData();
@@ -289,42 +277,37 @@ const StudentsClasses = () => {
         // Get class value from CSV
         let classValue = values[headers.indexOf('class') !== -1 ? headers.indexOf('class') : 5] || values[5] || '';
         
-        // Normalize class format: convert to proper case
+        // Normalize class format to new format (1A-12D)
         if (classValue) {
-          // Handle formats like "3b", "3B", "class 3b", "Class 3 - Section b", etc.
-          classValue = classValue.trim();
+          classValue = classValue.trim().toUpperCase();
           
-          // Pattern 1: "3b" or "3B" -> "Class 3 - Section B"
-          const shortFormat = classValue.match(/^(\d+)([a-dA-D])$/);
+          // Pattern 1: Already in new format "3B" -> "3B"
+          const shortFormat = classValue.match(/^(\d+)([A-D])$/);
           if (shortFormat) {
-            const classNum = shortFormat[1];
-            const section = shortFormat[2].toUpperCase();
-            classValue = `Class ${classNum} - Section ${section}`;
+            classValue = `${shortFormat[1]}${shortFormat[2]}`;
           }
-          // Pattern 2: "class 3 section b" or variations -> "Class 3 - Section B"
-          else if (classValue.toLowerCase().includes('class') && classValue.toLowerCase().includes('section')) {
-            const classMatch = classValue.match(/class\s*(\d+)/i);
-            const sectionMatch = classValue.match(/section\s*([a-dA-D])/i);
+          // Pattern 2: Old format "Class 3 - Section B" -> "3B"
+          else if (classValue.includes('CLASS') && classValue.includes('SECTION')) {
+            const classMatch = classValue.match(/CLASS\s*(\d+)/i);
+            const sectionMatch = classValue.match(/SECTION\s*([A-D])/i);
             if (classMatch && sectionMatch) {
-              const classNum = classMatch[1];
-              const section = sectionMatch[1].toUpperCase();
-              classValue = `Class ${classNum} - Section ${section}`;
+              classValue = `${classMatch[1]}${sectionMatch[1].toUpperCase()}`;
             }
           }
-          // Pattern 3: Already in format but maybe lowercase section -> normalize
-          else if (classValue.match(/^Class \d+ - Section [a-dA-D]$/i)) {
-            const parts = classValue.match(/^Class (\d+) - Section ([a-dA-D])$/i);
-            if (parts) {
-              classValue = `Class ${parts[1]} - Section ${parts[2].toUpperCase()}`;
+          // Pattern 3: "class 3b" or similar -> "3B"
+          else {
+            const match = classValue.match(/(\d+)\s*([A-D])/i);
+            if (match) {
+              classValue = `${match[1]}${match[2].toUpperCase()}`;
             }
           }
         }
         
-        // Check if it's a predefined class (starts with "Class") or a database class
+        // Check if it's a predefined class (new format 1A-12D) or a database class
         let studentClassData = {};
         if (classValue) {
-          if (classValue.startsWith('Class ')) {
-            // Predefined class like "Class 2 - Section A"
+          if (/^\d{1,2}[A-D]$/.test(classValue)) {
+            // Predefined class in new format like "3B"
             studentClassData.className = classValue;
           } else {
             // Try to find database class by name
@@ -521,13 +504,16 @@ const StudentsClasses = () => {
                 className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
               >
                 <option>All Classes</option>
-                {/* Predefined class options: Class 1-10 with sections A-D */}
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
-                  ['A', 'B', 'C', 'D'].map(section => (
-                    <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                      Class {classNum} - Section {section}
-                    </option>
-                  ))
+                {/* Predefined class options: 1A-12D format */}
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
+                  ['A', 'B', 'C', 'D'].map(section => {
+                    const className = `${classNum}${section}`;
+                    return (
+                      <option key={className} value={className}>
+                        {className}
+                      </option>
+                    );
+                  })
                 )}
                 {/* Also show database classes if any */}
                 {classes.length > 0 && (
@@ -585,8 +571,8 @@ const StudentsClasses = () => {
                 <ul className="text-sm text-blue-700 space-y-1 ml-4">
                   <li>• Upload a CSV file (.csv format)</li>
                   <li>• First row should be headers: <code className="bg-white px-1 rounded">name, email, phone, address, class</code></li>
-                  <li>• For class field, use predefined classes like: <code className="bg-white px-1 rounded">Class 1 - Section A</code></li>
-                  <li>• Example: <code className="bg-white px-2 py-1 rounded">John Doe,john@example.com,1234567890,123 Street,Class 2 - Section A</code></li>
+                  <li>• For class field, use predefined classes like: <code className="bg-white px-1 rounded">1A</code>, <code className="bg-white px-1 rounded">10B</code>, <code className="bg-white px-1 rounded">12C</code></li>
+                  <li>• Example: <code className="bg-white px-2 py-1 rounded">John Doe,john@example.com,1234567890,123 Street,2A</code></li>
                   <li>• Password will be auto-generated as <code className="bg-white px-1 rounded font-mono">Student@123</code></li>
                   <li>• Leave class empty if not assigning to any class</li>
                 </ul>
@@ -597,7 +583,7 @@ const StudentsClasses = () => {
                 <button
                   onClick={() => {
                     // Generate sample CSV with predefined classes
-                    const csvContent = `name,email,phone,address,class\nJohn Doe,john@example.com,1234567890,123 Main St,Class 1 - Section A\nJane Smith,jane@example.com,0987654321,456 Oak Ave,Class 2 - Section B\nMike Johnson,mike@example.com,9876543210,789 Park Rd,Class 3 - Section C`;
+                    const csvContent = `name,email,phone,address,class\nJohn Doe,john@example.com,1234567890,123 Main St,1A\nJane Smith,jane@example.com,0987654321,456 Oak Ave,2B\nMike Johnson,mike@example.com,9876543210,789 Park Rd,3C`;
                     const blob = new Blob([csvContent], { type: 'text/csv' });
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -740,19 +726,22 @@ const StudentsClasses = () => {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Class</label>
                   <select
-                    name="classId"
-                    value={formData.classId || formData.className}
+                    name="className"
+                    value={formData.className}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
                   >
                     <option value="">Select Class (Optional)</option>
-                    {/* Predefined class options: Class 1-10 with sections A-D */}
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
-                      ['A', 'B', 'C', 'D'].map(section => (
-                        <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                          Class {classNum} - Section {section}
-                        </option>
-                      ))
+                    {/* Predefined class options: 1A-12D format */}
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
+                      ['A', 'B', 'C', 'D'].map(section => {
+                        const className = `${classNum}${section}`;
+                        return (
+                          <option key={className} value={className}>
+                            {className}
+                          </option>
+                        );
+                      })
                     )}
                     {/* Also show database classes if any */}
                     {classes.length > 0 && (
@@ -854,19 +843,22 @@ const StudentsClasses = () => {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Class</label>
                   <select
-                    name="classId"
-                    value={formData.classId || formData.className}
+                    name="className"
+                    value={formData.className}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
                   >
                     <option value="">Select Class (Optional)</option>
-                    {/* Predefined class options: Class 1-10 with sections A-D */}
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
-                      ['A', 'B', 'C', 'D'].map(section => (
-                        <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                          Class {classNum} - Section {section}
-                        </option>
-                      ))
+                    {/* Predefined class options: 1A-12D format */}
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
+                      ['A', 'B', 'C', 'D'].map(section => {
+                        const className = `${classNum}${section}`;
+                        return (
+                          <option key={className} value={className}>
+                            {className}
+                          </option>
+                        );
+                      })
                     )}
                     {/* Also show database classes if any */}
                     {classes.length > 0 && (
@@ -912,7 +904,6 @@ const StudentsClasses = () => {
                       role: 'student',
                       phone: '',
                       address: '',
-                      classId: '',
                       className: ''
                     });
                   }}

@@ -22,23 +22,26 @@ const ClassPromotion = () => {
     }
   };
 
-  const handleSourceClassChange = async (classId) => {
-    setSelectedSourceClass(classId);
+  const handleSourceClassChange = async (className) => {
+    setSelectedSourceClass(className);
     
     try {
       // Fetch all students and filter by the selected class
       const response = await authAPI.getAllUsers({ role: 'student' });
       const allStudents = response.data.data || [];
       
-      // Filter students based on classId or className
+      // Normalize the selected class name for comparison
+      const normalizeClassName = (name) => {
+        if (!name) return '';
+        return name.trim().toUpperCase();
+      };
+      
+      const normalizedSelected = normalizeClassName(className);
+      
+      // Filter students based on className (normalized comparison)
       const filteredStudents = allStudents.filter(student => {
-        if (student.classId?._id === classId || student.classId === classId) {
-          return true;
-        }
-        if (student.className === classId) {
-          return true;
-        }
-        return false;
+        const studentClassName = normalizeClassName(student.className);
+        return studentClassName === normalizedSelected;
       });
       
       setSourceStudents(filteredStudents);
@@ -67,6 +70,10 @@ const ClassPromotion = () => {
     }
   };
 
+  // Extract grade number from source class for target class filtering
+  const sourceClassGrade = selectedSourceClass ? 
+    parseInt(selectedSourceClass.match(/^(\d{1,2})/)?.[1] || 0) : 0;
+
   const handlePromote = async () => {
     if (!selectedTargetClass) {
       alert('Please select a target class');
@@ -83,59 +90,47 @@ const ClassPromotion = () => {
       return;
     }
 
-    if (!confirm(`Are you sure you want to promote ${selectedStudents.length} student(s) to the new class?`)) {
+    // Check if trying to promote from class 12
+    const sourceClassMatch = selectedSourceClass.match(/^(\d{1,2})[A-D]$/);
+    if (sourceClassMatch && parseInt(sourceClassMatch[1]) === 12) {
+      alert('⚠️ Cannot promote students from Class 12. They have completed their schooling!');
+      return;
+    }
+
+    // Build list of student names for confirmation
+    const selectedStudentNames = sourceStudents
+      .filter(s => selectedStudents.includes(s._id))
+      .map(s => s.fullName)
+      .slice(0, 10); // Show first 10 names
+    
+    const namesList = selectedStudentNames.join('\n• ');
+    const moreStudents = selectedStudents.length > 10 ? `\n• ...and ${selectedStudents.length - 10} more` : '';
+    
+    if (!confirm(`Are you sure you want to promote ${selectedStudents.length} student(s) from ${selectedSourceClass} to ${selectedTargetClass}?\n\nStudents to be promoted:\n• ${namesList}${moreStudents}`)) {
       return;
     }
 
     setLoading(true);
 
     try {
-      // Check if target class is a predefined class or database class
-      const isTargetPredefined = selectedTargetClass.startsWith('Class');
-      
-      // Update each selected student
+      // Update each selected student with the new className
       const updatePromises = selectedStudents.map(studentId => {
-        if (isTargetPredefined) {
-          // For predefined classes, update className field and clear classId
-          return authAPI.updateUser(studentId, { 
-            className: selectedTargetClass,
-            classId: null
-          });
-        } else {
-          // For database classes, update classId field and clear className
-          return authAPI.updateUser(studentId, { 
-            classId: selectedTargetClass,
-            className: null
-          });
-        }
+        return authAPI.updateUser(studentId, { 
+          className: selectedTargetClass
+        });
       });
 
       await Promise.all(updatePromises);
 
-      // If source is a database class, remove students from it
-      if (!selectedSourceClass.startsWith('Class')) {
-        try {
-          await classAPI.updateClass(selectedSourceClass, {
-            removeStudents: selectedStudents
-          });
-        } catch (error) {
-          console.log('Could not update source class roster:', error);
-        }
-      }
+      // Get promoted student names for success message
+      const promotedStudents = sourceStudents
+        .filter(s => selectedStudents.includes(s._id))
+        .map(s => s.fullName);
+      
+      const firstFiveNames = promotedStudents.slice(0, 5).join('\n• ');
+      const remainingCount = promotedStudents.length > 5 ? `\n• ...and ${promotedStudents.length - 5} more` : '';
 
-      // If target is a database class, add students to it
-      if (!isTargetPredefined) {
-        try {
-          const addPromises = selectedStudents.map(studentId =>
-            classAPI.addStudentToClass(selectedTargetClass, studentId)
-          );
-          await Promise.all(addPromises);
-        } catch (error) {
-          console.log('Could not update target class roster:', error);
-        }
-      }
-
-      alert(`Successfully promoted ${selectedStudents.length} student(s)!`);
+      alert(`✅ Successfully promoted ${selectedStudents.length} student(s) from ${selectedSourceClass} to ${selectedTargetClass}!\n\nPromoted students:\n• ${firstFiveNames}${remainingCount}`);
       
       // Reset
       setSelectedSourceClass('');
@@ -173,23 +168,16 @@ const ClassPromotion = () => {
               className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
             >
               <option value="">-- Select Source Class --</option>
-              {/* Predefined class options: Class 1-10 with sections A-D */}
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
-                ['A', 'B', 'C', 'D'].map(section => (
-                  <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                    Class {classNum} - Section {section}
-                  </option>
-                ))
-              )}
-              {/* Also show database classes if any */}
-              {classes.length > 0 && (
-                <optgroup label="── Database Classes ──">
-                  {classes.map((cls) => (
-                    <option key={cls._id} value={cls._id}>
-                      {cls.name} - {cls.subject} ({cls.students?.length || 0} students)
+              {/* Predefined class options: Class 1-12 with sections A-D */}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
+                ['A', 'B', 'C', 'D'].map(section => {
+                  const className = `${classNum}${section}`;
+                  return (
+                    <option key={`${classNum}-${section}`} value={className}>
+                      {className}
                     </option>
-                  ))}
-                </optgroup>
+                  );
+                })
               )}
             </select>
           </div>
@@ -205,32 +193,20 @@ const ClassPromotion = () => {
               className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
             >
               <option value="">-- Select Target Class --</option>
-              {/* Predefined class options: Class 1-10 with sections A-D */}
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
+              {/* Predefined class options: Class 1-12 with sections A-D */}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
                 ['A', 'B', 'C', 'D'].map(section => {
-                  const classValue = `Class ${classNum} - Section ${section}`;
+                  const className = `${classNum}${section}`;
                   return (
                     <option 
                       key={`${classNum}-${section}`} 
-                      value={classValue}
-                      disabled={selectedSourceClass === classValue}
+                      value={className}
+                      disabled={sourceClassGrade && classNum < sourceClassGrade}
                     >
-                      Class {classNum} - Section {section}
+                      {className}
                     </option>
                   );
                 })
-              )}
-              {/* Also show database classes if any */}
-              {classes.length > 0 && (
-                <optgroup label="── Database Classes ──">
-                  {classes
-                    .filter(cls => cls._id !== selectedSourceClass)
-                    .map((cls) => (
-                      <option key={cls._id} value={cls._id}>
-                        {cls.name} - {cls.subject} ({cls.students?.length || 0} students)
-                      </option>
-                    ))}
-                </optgroup>
               )}
             </select>
           </div>

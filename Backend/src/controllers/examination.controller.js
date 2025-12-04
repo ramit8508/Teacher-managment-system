@@ -26,8 +26,8 @@ const createExamination = asyncHandler(async (req, res) => {
     }
   }
 
-  // Check if classId is a predefined class (string) or database class (ObjectId)
-  const isPredefinedClass = classId.startsWith('Class ');
+  // Check if classId matches new format (1A-12D) or is a database ObjectId
+  const isPredefinedClass = /^\d{1,2}[A-D]$/i.test(classId);
   
   const examinationData = {
     student,
@@ -61,10 +61,48 @@ const createExamination = asyncHandler(async (req, res) => {
 const getAllExaminations = asyncHandler(async (req, res) => {
   const { classId, studentId, subject } = req.query;
   
+  // ONLY filter for teachers, admins see ALL exams
+  let studentIds = null;
+  if (req.user && req.user.role === 'teacher') {
+    const { User } = await import("../models/user.model.js");
+    const { ClassAssignment } = await import("../models/classAssignment.model.js");
+    
+    // Find classes assigned to this teacher
+    const assignments = await ClassAssignment.find({ 
+      assignedTeachers: req.user._id 
+    }).select('className');
+    
+    const assignedClassNames = assignments.map(a => a.className);
+    
+    // Get students from assigned classes OR students created by this teacher
+    const query = {
+      role: 'student',
+      $or: [
+        { createdBy: req.user._id },
+        { className: { $in: assignedClassNames } }
+      ]
+    };
+    
+    const teacherStudents = await User.find(query).select('_id');
+    studentIds = teacherStudents.map(s => s._id);
+    
+    // If teacher has no students, return empty array
+    if (studentIds.length === 0) {
+      return res.status(200).json(
+        new ApiResponse(200, [], "No examination records found")
+      );
+    }
+  }
+  
   let query = {};
   if (classId) query.class = classId;
   if (studentId) query.student = studentId;
   if (subject) query.subject = subject;
+  
+  // Add student filter for teachers
+  if (studentIds) {
+    query.student = { $in: studentIds };
+  }
 
   const examinations = await Examination.find(query)
     .populate("student", "fullName email")

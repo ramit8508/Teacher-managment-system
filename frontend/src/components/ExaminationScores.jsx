@@ -239,13 +239,16 @@ const ExaminationScores = () => {
           className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
         >
           <option>All Classes</option>
-          {/* Predefined class options: Class 1-10 with sections A-D */}
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
-            ['A', 'B', 'C', 'D'].map(section => (
-              <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                Class {classNum} - Section {section}
-              </option>
-            ))
+          {/* Predefined class options: 1A-12D format */}
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
+            ['A', 'B', 'C', 'D'].map(section => {
+              const className = `${classNum}${section}`;
+              return (
+                <option key={className} value={className}>
+                  {className}
+                </option>
+              );
+            })
           )}
           {/* Also show database classes if any */}
           {classes.length > 0 && (
@@ -378,13 +381,16 @@ const ExaminationScores = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
                   >
                     <option value="">-- Select Class First --</option>
-                    {/* Predefined class options: Class 1-10 with sections A-D */}
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(classNum => 
-                      ['A', 'B', 'C', 'D'].map(section => (
-                        <option key={`${classNum}-${section}`} value={`Class ${classNum} - Section ${section}`}>
-                          Class {classNum} - Section {section}
-                        </option>
-                      ))
+                    {/* Predefined class options: 1A-12D format */}
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
+                      ['A', 'B', 'C', 'D'].map(section => {
+                        const className = `${classNum}${section}`;
+                        return (
+                          <option key={className} value={className}>
+                            {className}
+                          </option>
+                        );
+                      })
                     )}
                     {/* Also show database classes if any */}
                     {classes.length > 0 && (
@@ -412,10 +418,10 @@ const ExaminationScores = () => {
                     <option value="">-- Select Student --</option>
                     {students
                       .filter(student => {
-                        // Check if classId is a predefined class or database class
-                        const isPredefinedClass = examForm.classId.startsWith('Class ');
+                        // Check if classId matches new format (1A-12D) or is a database ObjectId
+                        const isPredefinedClass = /^\d{1,2}[A-D]$/i.test(examForm.classId);
                         if (isPredefinedClass) {
-                          return student.className === examForm.classId;
+                          return student.className && student.className.toUpperCase() === examForm.classId.toUpperCase();
                         } else {
                           return student.classId?._id === examForm.classId;
                         }

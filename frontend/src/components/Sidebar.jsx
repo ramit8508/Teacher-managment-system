@@ -24,6 +24,8 @@ const Sidebar = ({ onMenuChange, onLogout, isOpen, setIsOpen }) => {
     { id: 10, name: 'Manage Students', icon: '👥', roles: ['admin'], superAdminOnly: false },
     { id: 11, name: 'Change Password', icon: '🔐', roles: ['teacher', 'admin'], superAdminOnly: false },
     { id: 12, name: 'Manage Admins', icon: '👑', roles: ['admin'], superAdminOnly: true },
+    { id: 13, name: 'Bulk Add Students', icon: '📥', roles: ['admin'], superAdminOnly: true },
+    { id: 14, name: 'Class-Teacher Assignment', icon: '🔗', roles: ['admin'], superAdminOnly: false },
   ];
 
   // Filter menu items based on user role and super admin status

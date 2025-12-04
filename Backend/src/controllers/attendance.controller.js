@@ -25,7 +25,14 @@ const markAttendance = asyncHandler(async (req, res) => {
   const existingAttendance = await Attendance.findOne(query);
 
   if (existingAttendance) {
-    throw new ApiError(400, "Attendance already marked for this date");
+    // Update existing attendance record
+    existingAttendance.status = status;
+    if (remarks) existingAttendance.remarks = remarks;
+    await existingAttendance.save();
+    
+    return res.status(200).json(
+      new ApiResponse(200, existingAttendance, "Attendance updated successfully")
+    );
   }
 
   const attendanceData = {
@@ -53,10 +60,10 @@ const getAttendanceByClass = asyncHandler(async (req, res) => {
   const { classId } = req.params;
   const { startDate, endDate } = req.query;
 
-  // Check if classId is a predefined class name or ObjectId
-  const isPredefinedClass = classId.startsWith('Class ');
+  // Check if classId matches new format (1A-12D) or is an ObjectId
+  const isPredefinedClass = /^\d{1,2}[A-D]$/i.test(classId);
   
-  const query = isPredefinedClass ? { className: classId } : { class: classId };
+  const query = isPredefinedClass ? { className: new RegExp(`^${classId}$`, 'i') } : { class: classId };
 
   if (startDate && endDate) {
     query.date = {
@@ -91,6 +98,70 @@ const getAttendanceByStudent = asyncHandler(async (req, res) => {
   );
 });
 
+const getAllAttendance = asyncHandler(async (req, res) => {
+  const { startDate, endDate } = req.query;
+
+  // ONLY filter for teachers, admins see ALL attendance
+  let studentIds = null;
+  if (req.user && req.user.role === 'teacher') {
+    const { User } = await import("../models/user.model.js");
+    const { ClassAssignment } = await import("../models/classAssignment.model.js");
+    
+    // Find classes assigned to this teacher
+    const assignments = await ClassAssignment.find({ 
+      assignedTeachers: req.user._id 
+    }).select('className');
+    
+    const assignedClassNames = assignments.map(a => a.className);
+    
+    // Get students from assigned classes OR students created by this teacher
+    const query = {
+      role: 'student',
+      $or: [
+        { createdBy: req.user._id },
+        { className: { $in: assignedClassNames } }
+      ]
+    };
+    
+    const teacherStudents = await User.find(query).select('_id');
+    studentIds = teacherStudents.map(s => s._id);
+    
+    // If teacher has no students, return empty array
+    if (studentIds.length === 0) {
+      return res.status(200).json(
+        new ApiResponse(200, [], "No attendance records found")
+      );
+    }
+  }
+
+  const query = {};
+  
+  // Add student filter for teachers
+  if (studentIds) {
+    query.student = { $in: studentIds };
+  }
+
+  if (startDate && endDate) {
+    query.date = {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate)
+    };
+  } else if (startDate) {
+    query.date = { $gte: new Date(startDate) };
+  } else if (endDate) {
+    query.date = { $lte: new Date(endDate) };
+  }
+
+  const attendance = await Attendance.find(query)
+    .populate("student", "fullName email")
+    .populate("class", "className section")
+    .sort({ date: -1 });
+
+  return res.status(200).json(
+    new ApiResponse(200, attendance, "Attendance fetched successfully")
+  );
+});
+
 const updateAttendance = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status, remarks } = req.body;
@@ -112,6 +183,7 @@ const updateAttendance = asyncHandler(async (req, res) => {
 
 export {
   markAttendance,
+  getAllAttendance,
   getAttendanceByClass,
   getAttendanceByStudent,
   updateAttendance

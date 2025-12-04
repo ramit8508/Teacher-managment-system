@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   markAttendance,
+  getAllAttendance,
   getAttendanceByClass,
   getAttendanceByStudent,
   updateAttendance
@@ -13,7 +14,8 @@ const router = Router();
 router.use(verifyJWT);
 
 router.route("/")
-  .post(verifyRole("teacher", "admin"), markAttendance);
+  .post(verifyRole("teacher", "admin"), markAttendance)
+  .get(getAllAttendance);
 
 router.route("/class/:classId")
   .get(getAttendanceByClass);
