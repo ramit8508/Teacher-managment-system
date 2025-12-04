@@ -52,7 +52,7 @@ const ReportCard = ({ student, exams, onClose, hidePrintButton = false, classFil
           }
           @page {
             size: A4;
-            margin: 0;
+            margin: 10mm;
           }
           body {
             margin: 0;
@@ -63,7 +63,7 @@ const ReportCard = ({ student, exams, onClose, hidePrintButton = false, classFil
         .report-card {
           max-width: 210mm;
           margin: 0 auto;
-          padding: 20mm;
+          padding: 10mm;
           background: white;
           font-family: 'Times New Roman', serif;
         }
@@ -71,49 +71,51 @@ const ReportCard = ({ student, exams, onClose, hidePrintButton = false, classFil
         .report-header {
           text-align: center;
           border-bottom: 3px double #000;
-          padding-bottom: 15px;
-          margin-bottom: 20px;
+          padding-bottom: 8px;
+          margin-bottom: 10px;
         }
         
         .ngo-name {
-          font-size: 28px;
+          font-size: 24px;
           font-weight: bold;
           color: #1a365d;
-          margin-bottom: 5px;
+          margin-bottom: 3px;
         }
         
         .report-title {
-          font-size: 22px;
+          font-size: 18px;
           font-weight: bold;
-          margin: 10px 0;
+          margin: 5px 0;
           text-decoration: underline;
         }
         
         .student-info {
-          margin: 20px 0;
-          line-height: 1.8;
+          margin: 10px 0;
+          line-height: 1.5;
+          font-size: 12px;
         }
         
         .info-row {
           display: flex;
-          margin-bottom: 8px;
+          margin-bottom: 4px;
         }
         
         .info-label {
           font-weight: bold;
-          min-width: 150px;
+          min-width: 120px;
         }
         
         .marks-table {
           width: 100%;
           border-collapse: collapse;
-          margin: 20px 0;
+          margin: 10px 0;
+          font-size: 10px;
         }
         
         .marks-table th,
         .marks-table td {
           border: 1px solid #000;
-          padding: 10px;
+          padding: 4px;
           text-align: center;
         }
         
@@ -123,8 +125,8 @@ const ReportCard = ({ student, exams, onClose, hidePrintButton = false, classFil
         }
         
         .result-section {
-          margin: 20px 0;
-          padding: 15px;
+          margin: 10px 0;
+          padding: 10px;
           border: 2px solid #000;
           text-align: center;
         }
@@ -132,19 +134,20 @@ const ReportCard = ({ student, exams, onClose, hidePrintButton = false, classFil
         .result-pass {
           color: #22c55e;
           font-weight: bold;
-          font-size: 24px;
+          font-size: 20px;
         }
         
         .result-fail {
           color: #ef4444;
           font-weight: bold;
-          font-size: 24px;
+          font-size: 20px;
         }
         
         .signature-section {
-          margin-top: 40px;
+          margin-top: 20px;
           display: flex;
           justify-content: space-between;
+          font-size: 11px;
         }
         
         .signature-box {
@@ -154,7 +157,7 @@ const ReportCard = ({ student, exams, onClose, hidePrintButton = false, classFil
         
         .signature-line {
           border-top: 1px solid #000;
-          margin-top: 60px;
+          margin-top: 40px;
           padding-top: 5px;
         }
       `}</style>
@@ -191,11 +194,11 @@ const ReportCard = ({ student, exams, onClose, hidePrintButton = false, classFil
         {/* Header */}
         <div className="report-header">
           <div className="ngo-name">SPEAKINGHAND</div>
-          <div style={{ fontSize: '14px', color: '#666' }}>
+          <div style={{ fontSize: '11px', color: '#666' }}>
             An Initiative for Education and Empowerment
           </div>
           <div className="report-title">STUDENT REPORT CARD</div>
-          <div style={{ fontSize: '14px', marginTop: '5px' }}>
+          <div style={{ fontSize: '11px', marginTop: '3px' }}>
             Academic Session: {yearFilter || new Date().getFullYear()}
           </div>
         </div>
