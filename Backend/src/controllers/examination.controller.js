@@ -7,8 +7,8 @@ const createExamination = asyncHandler(async (req, res) => {
   const { student, classId, examName, examType, subjects, examDate, remarks } = req.body;
 
   // Validate required fields
-  if (!student || !classId || !examName) {
-    throw new ApiError(400, "Student, class, and exam name are required");
+  if (!student || !classId) {
+    throw new ApiError(400, "Student and class are required");
   }
 
   // Validate subjects array
@@ -199,8 +199,8 @@ const createBulkExaminations = asyncHandler(async (req, res) => {
   if (!students || !Array.isArray(students) || students.length === 0) {
     throw new ApiError(400, "Students array is required");
   }
-  if (!classId || !examName) {
-    throw new ApiError(400, "Class and exam name are required");
+  if (!classId) {
+    throw new ApiError(400, "Class is required");
   }
   if (!subjects || !Array.isArray(subjects) || subjects.length === 0) {
     throw new ApiError(400, "At least one subject is required");

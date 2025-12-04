@@ -16,7 +16,7 @@ const Auth = () => {
         </div>
         
         <Login />
-
+            
         <div className="text-center mt-8 text-sm text-gray-500">
           <p>School Management System v2.1.4</p>
           <p className="mt-1">© 2025 Educational Software Solutions</p>
