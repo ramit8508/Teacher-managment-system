@@ -342,6 +342,49 @@ const AdminStudents = () => {
               </div>
             ) : (
               <div className="space-y-6">
+                {/* Personal Information */}
+                <div className="bg-indigo-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-800 mb-3">👤 Personal Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
+                    <div>
+                      <p className="text-gray-500 text-xs">Full Name</p>
+                      <p className="font-medium">{selectedStudent.fullName || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Email</p>
+                      <p className="font-medium">{selectedStudent.email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Phone Number</p>
+                      <p className="font-medium">{selectedStudent.phoneNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Roll Number</p>
+                      <p className="font-medium">{selectedStudent.rollNo || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Father's Name</p>
+                      <p className="font-medium">{selectedStudent.fatherName || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Mother's Name</p>
+                      <p className="font-medium">{selectedStudent.motherName || 'N/A'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-gray-500 text-xs">Address</p>
+                      <p className="font-medium">{selectedStudent.address || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Username</p>
+                      <p className="font-medium">{selectedStudent.username || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Joined Date</p>
+                      <p className="font-medium">{new Date(selectedStudent.createdAt).toLocaleDateString() || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Class Info */}
                 <div className="bg-blue-50 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-800 mb-2">🏫 Class Information</h3>
