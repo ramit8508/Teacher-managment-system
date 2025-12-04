@@ -11,19 +11,12 @@ const ClassTeacherAssignment = () => {
   const [teachers, setTeachers] = useState([]);
   const [classes, setClasses] = useState([]);
   const [assignments, setAssignments] = useState([]); // { classId, className, assignedTeachers: [] }
+  const [availableClasses, setAvailableClasses] = useState([]); // Classes from database
 
   // Modal state
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [selectedTeachers, setSelectedTeachers] = useState([]);
-
-  // Available classes with sections
-  const availableClasses = [];
-  for (let i = 1; i <= 12; i++) {
-    ['A', 'B', 'C', 'D'].forEach(section => {
-      availableClasses.push(`${i}${section}`);
-    });
-  }
 
   // State for students
   const [students, setStudents] = useState([]);
@@ -44,6 +37,31 @@ const ClassTeacherAssignment = () => {
       const studentsResponse = await authAPI.getAllUsers({ role: 'student' });
       const allStudents = studentsResponse.data.data;
       setStudents(allStudents);
+
+      // Fetch class names from database
+      const classesResponse = await classAPI.getAllClassNames();
+      const dbClasses = classesResponse.data.data || [];
+      
+      // Also get classes from students
+      const studentClasses = [...new Set(allStudents.map(s => s.className).filter(Boolean).map(c => c.toUpperCase()))];
+      
+      // Merge database classes and student classes, remove duplicates
+      const allClassNames = [...new Set([...dbClasses, ...studentClasses])];
+      
+      // Sort classes properly (1A, 1B... 12Z)
+      const sortedClasses = allClassNames.sort((a, b) => {
+        const matchA = a.match(/^(\d+)([A-Z]+)$/);
+        const matchB = b.match(/^(\d+)([A-Z]+)$/);
+        if (matchA && matchB) {
+          const gradeA = parseInt(matchA[1]);
+          const gradeB = parseInt(matchB[1]);
+          if (gradeA !== gradeB) return gradeA - gradeB;
+          return matchA[2].localeCompare(matchB[2]);
+        }
+        return a.localeCompare(b);
+      });
+      
+      setAvailableClasses(sortedClasses);
 
       // Fetch class-teacher assignments
       const assignmentsResponse = await classAPI.getClassAssignments();

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { attendanceAPI, classAPI, authAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const Attendance = () => {
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedClass, setSelectedClass] = useState('');
   const [classes, setClasses] = useState([]);
@@ -21,8 +23,51 @@ const Attendance = () => {
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      const response = await classAPI.getAllClasses();
-      setClasses(response.data.data || []);
+      let classNames = [];
+      
+      // If user is a teacher, fetch only their assigned classes
+      if (user?.role === 'teacher') {
+        try {
+          const assignmentsRes = await classAPI.getClassAssignments();
+          const allAssignments = assignmentsRes.data.data || [];
+          
+          // Find classes where this teacher is assigned
+          const teacherAssignments = allAssignments.filter(assignment => 
+            assignment.assignedTeachers?.some(teacher => teacher._id === user._id)
+          );
+          
+          classNames = teacherAssignments.map(a => a.className.toUpperCase());
+        } catch (error) {
+          console.error('Error fetching teacher assignments:', error);
+        }
+      } else {
+        // Admin: Get both database classes AND classes from students
+        const response = await classAPI.getAllClassNames();
+        const dbClasses = response.data.data || [];
+        
+        // Also get classes from students
+        const studentsRes = await authAPI.getAllUsers({ role: 'student' });
+        const students = studentsRes.data.data || [];
+        const studentClasses = [...new Set(students.map(s => s.className).filter(Boolean).map(c => c.toUpperCase()))];
+        
+        // Merge and deduplicate
+        classNames = [...new Set([...dbClasses, ...studentClasses])];
+      }
+      
+      // Sort classes properly
+      const sortedClasses = classNames.sort((a, b) => {
+        const matchA = a.match(/^(\d+)([A-Z]+)$/);
+        const matchB = b.match(/^(\d+)([A-Z]+)$/);
+        if (matchA && matchB) {
+          const gradeA = parseInt(matchA[1]);
+          const gradeB = parseInt(matchB[1]);
+          if (gradeA !== gradeB) return gradeA - gradeB;
+          return matchA[2].localeCompare(matchB[2]);
+        }
+        return a.localeCompare(b);
+      });
+      
+      setClasses(sortedClasses);
     } catch (error) {
       console.error('Error fetching classes:', error);
     } finally {
@@ -43,8 +88,8 @@ const Attendance = () => {
       const studentsResponse = await authAPI.getAllUsers({ role: 'student' });
       const allStudents = studentsResponse.data.data || [];
       
-      // Check if selectedClass matches the new format (1A-12D) or is a database ObjectId
-      const isPredefinedClass = /^\d{1,2}[A-D]$/i.test(selectedClass);
+      // Check if selectedClass matches the new format (1A-12Z) or is a database ObjectId
+      const isPredefinedClass = /^\d{1,2}[A-Z]$/i.test(selectedClass);
       
       // Filter students based on selected class
       let filteredStudents;
@@ -175,24 +220,17 @@ const Attendance = () => {
     try {
       setHistoryLoading(true);
       
-      console.log('Fetching history for class:', historyClass, 'date:', historyDate);
-      
       // Fetch attendance records for the selected class
       const response = await attendanceAPI.getAttendanceByClass(historyClass);
       const records = response.data.data || [];
-      
-      console.log('Fetched records:', records);
       
       // Filter by selected date if provided
       const filteredRecords = historyDate 
         ? records.filter(record => {
             const recordDate = new Date(record.date).toISOString().split('T')[0];
-            console.log('Comparing:', recordDate, '===', historyDate);
             return recordDate === historyDate;
           })
         : records;
-      
-      console.log('Filtered records:', filteredRecords);
       
       if (filteredRecords.length === 0) {
         alert(`No attendance records found for ${historyClass} on ${historyDate}!`);
@@ -260,25 +298,15 @@ const Attendance = () => {
                   value={historyClass} 
                   onChange={(e) => setHistoryClass(e.target.value)} 
                   className="w-full px-4 py-2 border-2 border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-white"
+                  style={{ maxHeight: '300px', overflowY: 'auto' }}
+                  size="1"
                 >
                   <option value="">-- Select Class --</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
-                    ['A', 'B', 'C', 'D'].map(section => {
-                      const className = `${classNum}${section}`;
-                      return (
-                        <option key={className} value={className}>
-                          {className}
-                        </option>
-                      );
-                    })
-                  )}
-                  {classes.length > 0 && (
-                    <optgroup label="─── Database Classes ───">
-                      {classes.map((cls) => (
-                        <option key={cls._id} value={cls._id}>{cls.name}</option>
-                      ))}
-                    </optgroup>
-                  )}
+                  {classes.map(className => (
+                    <option key={className} value={className}>
+                      {className}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -399,28 +427,16 @@ const Attendance = () => {
               value={selectedClass} 
               onChange={(e) => setSelectedClass(e.target.value)} 
               className="w-full px-4 py-2 border-2 border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+              style={{ maxHeight: '300px', overflowY: 'auto' }}
+              size="1"
               disabled={loading}
             >
               <option value="">-- Select Class --</option>
-              {/* Predefined class options: 1A-12D format */}
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
-                ['A', 'B', 'C', 'D'].map(section => {
-                  const className = `${classNum}${section}`;
-                  return (
-                    <option key={className} value={className}>
-                      {className}
-                    </option>
-                  );
-                })
-              )}
-              {/* Also show database classes if any */}
-              {classes.length > 0 && (
-                <optgroup label="─── Database Classes ───">
-                  {classes.map((cls) => (
-                    <option key={cls._id} value={cls._id}>{cls.name}</option>
-                  ))}
-                </optgroup>
-              )}
+              {classes.map(className => (
+                <option key={className} value={className}>
+                  {className}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex items-end">

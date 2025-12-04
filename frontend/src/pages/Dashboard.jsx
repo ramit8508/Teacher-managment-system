@@ -16,6 +16,7 @@ import BulkFeeManagement from '../components/BulkFeeManagement';
 import BulkExamEditor from '../components/BulkExamEditor';
 import ClassPromotion from '../components/ClassPromotion';
 import ChangePassword from '../components/ChangePassword';
+import ManageClasses from '../components/ManageClasses';
 
 const Dashboard = ({ onLogout }) => {
   const { user } = useAuth();
@@ -34,6 +35,8 @@ const Dashboard = ({ onLogout }) => {
           return <AdminStudents />;
         case 'Manage Admins':
           return <ManageAdmins />;
+        case 'Manage Classes':
+          return <ManageClasses />;
         case 'Bulk Add Students':
           return <BulkStudentAdd />;
         case 'Class-Teacher Assignment':

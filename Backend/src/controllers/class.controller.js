@@ -159,6 +159,56 @@ const getAssignmentByClassName = asyncHandler(async (req, res) => {
   );
 });
 
+// Get all distinct class names (from ClassAssignment collection)
+const getAllClassNames = asyncHandler(async (req, res) => {
+  const assignments = await ClassAssignment.find().select('className -_id');
+  const classNames = assignments.map(a => a.className);
+
+  return res.status(200).json(
+    new ApiResponse(200, classNames, "Class names fetched successfully")
+  );
+});
+
+// Create a simple class name entry
+const createClassName = asyncHandler(async (req, res) => {
+  const { className } = req.body;
+
+  if (!className) {
+    throw new ApiError(400, "className is required");
+  }
+
+  // Check if class already exists
+  const existingClass = await ClassAssignment.findOne({ className });
+  if (existingClass) {
+    throw new ApiError(400, "Class already exists");
+  }
+
+  // Create class with empty teachers array
+  const newClass = await ClassAssignment.create({
+    className,
+    assignedTeachers: []
+  });
+
+  return res.status(201).json(
+    new ApiResponse(201, newClass, "Class created successfully")
+  );
+});
+
+// Delete a class name entry
+const deleteClassName = asyncHandler(async (req, res) => {
+  const { className } = req.params;
+
+  const deletedClass = await ClassAssignment.findOneAndDelete({ className });
+
+  if (!deletedClass) {
+    throw new ApiError(404, "Class not found");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, {}, "Class deleted successfully")
+  );
+});
+
 export {
   createClass,
   getClasses,
@@ -168,5 +218,8 @@ export {
   addStudentToClass,
   assignTeachersToClass,
   getClassAssignments,
-  getAssignmentByClassName
+  getAssignmentByClassName,
+  getAllClassNames,
+  createClassName,
+  deleteClassName
 };

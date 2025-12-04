@@ -24,6 +24,10 @@ export const classAPI = {
   getClassAssignments: () => api.get('/classes/assignments'),
   assignTeachersToClass: (className, teacherIds) => api.post('/classes/assignments/assign', { className, teacherIds }),
   getAssignmentByClassName: (className) => api.get(`/classes/assignments/${className}`),
+  // Simple class name management
+  getAllClassNames: () => api.get('/classes/names'),
+  createClassName: (className) => api.post('/classes/names', { className }),
+  deleteClassName: (className) => api.delete(`/classes/names/${className}`),
 };
 
 // Attendance APIs

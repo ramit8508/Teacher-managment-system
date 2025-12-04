@@ -136,7 +136,27 @@ const AdminStudents = () => {
     students
       .map(s => s.className || s.classId?.name)
       .filter(Boolean)
-  )].sort();
+  )].sort((a, b) => {
+    // Custom sort: extract grade number and section letter(s)
+    const matchA = a.match(/^(\d+)([A-Z]+)$/);
+    const matchB = b.match(/^(\d+)([A-Z]+)$/);
+    
+    if (matchA && matchB) {
+      const gradeA = parseInt(matchA[1], 10);
+      const gradeB = parseInt(matchB[1], 10);
+      const sectionA = matchA[2];
+      const sectionB = matchB[2];
+      
+      // First sort by grade number (1, 2, 3... 12)
+      if (gradeA !== gradeB) return gradeA - gradeB;
+      
+      // Then sort by section letter alphabetically (A, B, C... Z)
+      return sectionA.localeCompare(sectionB);
+    }
+    
+    // Fallback to string comparison for non-standard formats
+    return a.localeCompare(b);
+  });
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

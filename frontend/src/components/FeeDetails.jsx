@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { feeAPI, classAPI, authAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const FeeDetails = () => {
+  const { user } = useAuth();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [feeRecords, setFeeRecords] = useState([]);
@@ -41,8 +43,48 @@ const FeeDetails = () => {
       setFeeRecords(fees);
       
       // Fetch classes
-      const classesRes = await classAPI.getAllClasses();
-      setClasses(classesRes.data.data || []);
+      let classNames = [];
+      
+      // If user is a teacher, fetch only their assigned classes
+      if (user?.role === 'teacher') {
+        try {
+          const assignmentsRes = await classAPI.getClassAssignments();
+          const allAssignments = assignmentsRes.data.data || [];
+          
+          const teacherAssignments = allAssignments.filter(assignment => 
+            assignment.assignedTeachers?.some(teacher => teacher._id === user._id)
+          );
+          
+          classNames = teacherAssignments.map(a => a.className.toUpperCase());
+        } catch (error) {
+          console.error('Error fetching teacher assignments:', error);
+        }
+      } else {
+        // Admin: Get both database classes AND classes from students
+        const classesRes = await classAPI.getAllClassNames();
+        const dbClasses = classesRes.data.data || [];
+        
+        // Also get classes from students
+        const studentClasses = [...new Set(students.map(s => s.className).filter(Boolean).map(c => c.toUpperCase()))];
+        
+        // Merge and deduplicate
+        classNames = [...new Set([...dbClasses, ...studentClasses])];
+      }
+      
+      // Sort classes properly
+      const sortedClasses = classNames.sort((a, b) => {
+        const matchA = a.match(/^(\d+)([A-Z]+)$/);
+        const matchB = b.match(/^(\d+)([A-Z]+)$/);
+        if (matchA && matchB) {
+          const gradeA = parseInt(matchA[1]);
+          const gradeB = parseInt(matchB[1]);
+          if (gradeA !== gradeB) return gradeA - gradeB;
+          return matchA[2].localeCompare(matchB[2]);
+        }
+        return a.localeCompare(b);
+      });
+      
+      setClasses(sortedClasses);
       
       // Fetch all students
       const studentsRes = await authAPI.getAllUsers({ role: 'student' });
@@ -222,24 +264,15 @@ const FeeDetails = () => {
                   value={selectedClass}
                   onChange={(e) => setSelectedClass(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  style={{ maxHeight: '300px', overflowY: 'auto' }}
+                  size="1"
                 >
                   <option>All Classes</option>
-                  {/* Predefined class options: 1A-12D */}
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
-                    ['A', 'B', 'C', 'D'].map(section => (
-                      <option key={`${classNum}${section}`} value={`${classNum}${section}`}>
-                        {classNum}{section}
-                      </option>
-                    ))
-                  )}
-                  {/* Also show database classes if any */}
-                  {classes.length > 0 && (
-                    <optgroup label="─── Database Classes ───">
-                      {classes.map((cls) => (
-                        <option key={cls._id} value={cls.name}>{cls.name}</option>
-                      ))}
-                    </optgroup>
-                  )}
+                  {classes.map(className => (
+                    <option key={className} value={className}>
+                      {className}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -282,28 +315,17 @@ const FeeDetails = () => {
                   <select 
                     required 
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none" 
+                    style={{ maxHeight: '300px', overflowY: 'auto' }}
+                    size="1"
                     value={paymentForm.classId} 
                     onChange={(e) => setPaymentForm({...paymentForm, classId: e.target.value, studentId: ''})}
                   >
                     <option value="">-- Select Class First --</option>
-                    {/* Predefined class options: 1A-12D */}
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
-                        ['A', 'B', 'C', 'D'].map(section => (
-                        <option key={`${classNum}${section}`} value={`${classNum}${section}`}>
-                          {classNum}{section}
-                        </option>
-                        ))
-                      )}
-                    {/* Also show database classes if any */}
-                    {classes.length > 0 && (
-                      <optgroup label="─── Database Classes ───">
-                        {classes.map((cls) => (
-                          <option key={cls._id} value={cls._id}>
-                            {cls.name} - {cls.subject}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
+                    {classes.map(className => (
+                      <option key={className} value={className}>
+                        {className}
+                      </option>
+                    ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">Select class first, then student</p>
                 </div>

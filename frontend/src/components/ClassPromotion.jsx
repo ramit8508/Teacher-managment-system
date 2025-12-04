@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { classAPI, authAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const ClassPromotion = () => {
-  const [classes, setClasses] = useState([]);
+  const { user } = useAuth();
+  const [sourceClasses, setSourceClasses] = useState([]); // Classes teacher can promote FROM
+  const [allClasses, setAllClasses] = useState([]); // All classes for target selection
   const [selectedSourceClass, setSelectedSourceClass] = useState('');
   const [selectedTargetClass, setSelectedTargetClass] = useState('');
   const [sourceStudents, setSourceStudents] = useState([]);
@@ -15,8 +18,72 @@ const ClassPromotion = () => {
 
   const fetchClasses = async () => {
     try {
-      const response = await classAPI.getAllClasses();
-      setClasses(response.data.data || []);
+      let sourceClassNames = [];
+      
+      // Fetch source classes (teacher's assigned classes for teachers, all for admin)
+      if (user?.role === 'teacher') {
+        try {
+          const assignmentsRes = await classAPI.getClassAssignments();
+          const allAssignments = assignmentsRes.data.data || [];
+          
+          const teacherAssignments = allAssignments.filter(assignment => 
+            assignment.assignedTeachers?.some(teacher => teacher._id === user._id)
+          );
+          
+          sourceClassNames = teacherAssignments.map(a => a.className.toUpperCase());
+        } catch (error) {
+          console.error('Error fetching teacher assignments:', error);
+        }
+      } else {
+        // Admin: Get both database classes AND classes from students
+        const response = await classAPI.getAllClassNames();
+        const dbClasses = response.data.data || [];
+        
+        // Also get classes from students
+        const studentsRes = await authAPI.getAllUsers({ role: 'student' });
+        const students = studentsRes.data.data || [];
+        const studentClasses = [...new Set(students.map(s => s.className).filter(Boolean).map(c => c.toUpperCase()))];
+        
+        // Merge and deduplicate
+        sourceClassNames = [...new Set([...dbClasses, ...studentClasses])];
+      }
+      
+      // Fetch ALL classes for target dropdown (both teachers and admins)
+      const response = await classAPI.getAllClassNames();
+      const dbClasses = response.data.data || [];
+      
+      const studentsRes = await authAPI.getAllUsers({ role: 'student' });
+      const students = studentsRes.data.data || [];
+      const studentClasses = [...new Set(students.map(s => s.className).filter(Boolean).map(c => c.toUpperCase()))];
+      
+      // Generate all possible class combinations (1-12 grades, A-D sections)
+      const allPossibleClasses = [];
+      for (let grade = 1; grade <= 12; grade++) {
+        for (let section of ['A', 'B', 'C', 'D']) {
+          allPossibleClasses.push(`${grade}${section}`);
+        }
+      }
+      
+      // Merge with existing classes from DB and students
+      const allClassNames = [...new Set([...allPossibleClasses, ...dbClasses, ...studentClasses])];
+      
+      // Sort both lists
+      const sortClasses = (classList) => {
+        return classList.sort((a, b) => {
+          const matchA = a.match(/^(\d+)([A-Z]+)$/);
+          const matchB = b.match(/^(\d+)([A-Z]+)$/);
+          if (matchA && matchB) {
+            const gradeA = parseInt(matchA[1]);
+            const gradeB = parseInt(matchB[1]);
+            if (gradeA !== gradeB) return gradeA - gradeB;
+            return matchA[2].localeCompare(matchB[2]);
+          }
+          return a.localeCompare(b);
+        });
+      };
+      
+      setSourceClasses(sortClasses(sourceClassNames));
+      setAllClasses(sortClasses(allClassNames));
     } catch (error) {
       console.error('Error fetching classes:', error);
     }
@@ -166,19 +233,15 @@ const ClassPromotion = () => {
               value={selectedSourceClass}
               onChange={(e) => handleSourceClassChange(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+              style={{ maxHeight: '300px', overflowY: 'auto' }}
+              size="1"
             >
               <option value="">-- Select Source Class --</option>
-              {/* Predefined class options: Class 1-12 with sections A-D */}
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
-                ['A', 'B', 'C', 'D'].map(section => {
-                  const className = `${classNum}${section}`;
-                  return (
-                    <option key={`${classNum}-${section}`} value={className}>
-                      {className}
-                    </option>
-                  );
-                })
-              )}
+              {sourceClasses.map(className => (
+                <option key={className} value={className}>
+                  {className}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -191,23 +254,23 @@ const ClassPromotion = () => {
               value={selectedTargetClass}
               onChange={(e) => setSelectedTargetClass(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+              style={{ maxHeight: '300px', overflowY: 'auto' }}
+              size="1"
             >
               <option value="">-- Select Target Class --</option>
-              {/* Predefined class options: Class 1-12 with sections A-D */}
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
-                ['A', 'B', 'C', 'D'].map(section => {
-                  const className = `${classNum}${section}`;
-                  return (
-                    <option 
-                      key={`${classNum}-${section}`} 
-                      value={className}
-                      disabled={sourceClassGrade && classNum < sourceClassGrade}
-                    >
-                      {className}
-                    </option>
-                  );
-                })
-              )}
+              {allClasses.map(className => {
+                const targetGrade = parseInt(className.match(/^(\d{1,2})/)?.[1] || 0);
+                const isDisabled = sourceClassGrade && targetGrade < sourceClassGrade;
+                return (
+                  <option 
+                    key={className} 
+                    value={className}
+                    disabled={isDisabled}
+                  >
+                    {className}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

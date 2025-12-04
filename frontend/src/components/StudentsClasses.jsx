@@ -6,13 +6,6 @@ const StudentsClasses = () => {
   const { user } = useAuth(); // Get current user
   const isTeacherOrAdmin = user?.role === 'teacher' || user?.role === 'admin'; // Check if user is teacher or admin
   
-  // Debug: Log user role
-  useEffect(() => {
-    console.log('Current User:', user);
-    console.log('User Role:', user?.role);
-    console.log('Is Teacher or Admin:', isTeacherOrAdmin);
-  }, [user, isTeacherOrAdmin]);
-  
   const [activeTab, setActiveTab] = useState('Students');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -40,6 +33,7 @@ const StudentsClasses = () => {
   });
 
   const [students, setStudents] = useState([]);
+  const [teacherAssignedClasses, setTeacherAssignedClasses] = useState([]); // Classes assigned to teacher
 
   useEffect(() => {
     fetchData();
@@ -51,7 +45,34 @@ const StudentsClasses = () => {
       
       // Fetch all students (users with role='student')
       const studentsRes = await authAPI.getAllUsers({ role: 'student' });
-      const studentsList = studentsRes.data.data || [];
+      let studentsList = studentsRes.data.data || [];
+      
+      // If user is a teacher (not admin), fetch their assigned classes
+      let assignedClassNames = [];
+      if (user?.role === 'teacher') {
+        try {
+          const assignmentsRes = await classAPI.getClassAssignments();
+          const allAssignments = assignmentsRes.data.data || [];
+          
+          // Find classes where this teacher is assigned
+          const teacherAssignments = allAssignments.filter(assignment => 
+            assignment.assignedTeachers?.some(teacher => teacher._id === user._id)
+          );
+          
+          assignedClassNames = teacherAssignments.map(a => a.className.toUpperCase());
+          setTeacherAssignedClasses(assignedClassNames);
+          
+          // Filter students to only show those in teacher's assigned classes
+          if (assignedClassNames.length > 0) {
+            studentsList = studentsList.filter(student => 
+              student.className && assignedClassNames.includes(student.className.toUpperCase())
+            );
+          }
+        } catch (error) {
+          console.error('Error fetching teacher assignments:', error);
+        }
+      }
+      
       setStudents(studentsList);
       
       // Fetch all classes
@@ -79,6 +100,51 @@ const StudentsClasses = () => {
     }
   };
 
+  // Get unique classes that have students, sorted properly (1A, 1B, 1C... 1E, 2A, 2B... 12Z)
+  // For teachers, only show their assigned classes
+  const getClassesWithStudents = () => {
+    const classSet = new Set();
+    students.forEach(student => {
+      if (student.className) {
+        const className = student.className.toUpperCase();
+        // If teacher, only include classes they're assigned to
+        if (user?.role === 'teacher') {
+          if (teacherAssignedClasses.includes(className)) {
+            classSet.add(className);
+          }
+        } else {
+          // Admin sees all classes
+          classSet.add(className);
+        }
+      }
+    });
+    
+    const classArray = Array.from(classSet);
+    
+    // Sort properly: 1A, 1B, 1C, 2A, 2B... 10A, 10B, 11A... 12Z
+    return classArray.sort((a, b) => {
+      // Custom sort: extract grade number and section letter(s)
+      const matchA = a.match(/^(\d+)([A-Z]+)$/);
+      const matchB = b.match(/^(\d+)([A-Z]+)$/);
+      
+      if (matchA && matchB) {
+        const gradeA = parseInt(matchA[1], 10);
+        const gradeB = parseInt(matchB[1], 10);
+        const sectionA = matchA[2];
+        const sectionB = matchB[2];
+        
+        // First sort by grade number (1, 2, 3... 12)
+        if (gradeA !== gradeB) return gradeA - gradeB;
+        
+        // Then sort by section letter alphabetically (A, B, C... Z)
+        return sectionA.localeCompare(sectionB);
+      }
+      
+      // Fallback to string comparison for non-standard formats
+      return a.localeCompare(b);
+    });
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
@@ -101,8 +167,6 @@ const StudentsClasses = () => {
         password: 'Student@123', // Default password for all students
         className: formData.className ? formData.className.trim().toUpperCase() : '' // Normalize to uppercase
       };
-      
-      console.log('Sending student data:', studentData); // Debug log
       
       await authAPI.register(studentData);
       setShowAddModal(false);
@@ -437,9 +501,12 @@ const StudentsClasses = () => {
 
   const filteredStudents = selectedClass === 'All Classes'
     ? students
+    : selectedClass === 'Unassigned Students'
+    ? students.filter(student => !student.className || student.className.trim() === '')
     : students.filter(student => {
-        // Filter by class if student has classId populated or className
-        return student.classId?.name === selectedClass || student.className === selectedClass;
+        // Normalize and compare className (case-insensitive)
+        const studentClass = student.className ? student.className.toUpperCase() : '';
+        return studentClass === selectedClass.toUpperCase();
       });
 
   return (
@@ -502,27 +569,17 @@ const StudentsClasses = () => {
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                style={{ maxHeight: '300px', overflowY: 'auto' }}
+                size="1"
               >
                 <option>All Classes</option>
-                {/* Predefined class options: 1A-12D format */}
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
-                  ['A', 'B', 'C', 'D'].map(section => {
-                    const className = `${classNum}${section}`;
-                    return (
-                      <option key={className} value={className}>
-                        {className}
-                      </option>
-                    );
-                  })
-                )}
-                {/* Also show database classes if any */}
-                {classes.length > 0 && (
-                  <optgroup label="─── Database Classes ───">
-                    {classes.map((cls) => (
-                      <option key={cls._id} value={cls.name}>{cls.name}</option>
-                    ))}
-                  </optgroup>
-                )}
+                <option>Unassigned Students</option>
+                {/* Show only classes that have students */}
+                {getClassesWithStudents().map(className => (
+                  <option key={className} value={className}>
+                    {className}
+                  </option>
+                ))}
               </select>
             </div>
             {isTeacherOrAdmin && (
@@ -725,35 +782,21 @@ const StudentsClasses = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Class</label>
-                  <select
+                  <input
+                    type="text"
                     name="className"
                     value={formData.className}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
-                  >
-                    <option value="">Select Class (Optional)</option>
-                    {/* Predefined class options: 1A-12D format */}
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
-                      ['A', 'B', 'C', 'D'].map(section => {
-                        const className = `${classNum}${section}`;
-                        return (
-                          <option key={className} value={className}>
-                            {className}
-                          </option>
-                        );
-                      })
-                    )}
-                    {/* Also show database classes if any */}
-                    {classes.length > 0 && (
-                      <optgroup label="─────────────────">
-                        {classes.map((cls) => (
-                          <option key={cls._id} value={cls._id}>
-                            {cls.name} - {cls.subject}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
+                    placeholder="e.g., 1A, 5D, 10E, 12F"
+                    list="existing-classes"
+                  />
+                  <datalist id="existing-classes">
+                    {getClassesWithStudents().map(className => (
+                      <option key={className} value={className} />
+                    ))}
+                  </datalist>
+                  <p className="text-xs text-gray-500 mt-1">💡 Format: Grade + Section (e.g., 1A, 5E, 12Z). Admin can create any section A-Z.</p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Address</label>
@@ -842,35 +885,21 @@ const StudentsClasses = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Class</label>
-                  <select
+                  <input
+                    type="text"
                     name="className"
                     value={formData.className}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
-                  >
-                    <option value="">Select Class (Optional)</option>
-                    {/* Predefined class options: 1A-12D format */}
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(classNum => 
-                      ['A', 'B', 'C', 'D'].map(section => {
-                        const className = `${classNum}${section}`;
-                        return (
-                          <option key={className} value={className}>
-                            {className}
-                          </option>
-                        );
-                      })
-                    )}
-                    {/* Also show database classes if any */}
-                    {classes.length > 0 && (
-                      <optgroup label="─────────────────">
-                        {classes.map((cls) => (
-                          <option key={cls._id} value={cls._id}>
-                            {cls.name} - {cls.subject}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
+                    placeholder="e.g., 1A, 5D, 10E, 12F"
+                    list="existing-classes-edit"
+                  />
+                  <datalist id="existing-classes-edit">
+                    {getClassesWithStudents().map(className => (
+                      <option key={className} value={className} />
+                    ))}
+                  </datalist>
+                  <p className="text-xs text-gray-500 mt-1">💡 Format: Grade + Section (e.g., 1A, 5E, 12Z). Admin can create any section A-Z.</p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Address</label>
