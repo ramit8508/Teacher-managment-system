@@ -55,6 +55,15 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user };
     } catch (error) {
       console.error('Login failed:', error);
+      
+      // Handle timeout specifically
+      if (error.code === 'ECONNABORTED') {
+        return { 
+          success: false, 
+          message: 'Request timeout - Server is taking too long to respond. Please wait and try again.' 
+        };
+      }
+      
       return { 
         success: false, 
         message: error.response?.data?.message || 'Login failed' 

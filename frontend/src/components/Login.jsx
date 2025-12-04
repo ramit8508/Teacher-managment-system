@@ -23,13 +23,25 @@ const Login = () => {
     setIsLoading(true);
     setError('');
     
-    const result = await login(formData);
-    
-    if (result.success) {
-      // Login successful - AuthContext will handle state update
-      console.log('Login successful');
-    } else {
-      setError(result.message || 'Invalid credentials');
+    try {
+      const result = await login(formData);
+      
+      if (result.success) {
+        // Login successful - AuthContext will handle state update
+        console.log('Login successful');
+      } else {
+        setError(result.message || 'Invalid credentials');
+        setIsLoading(false);
+      }
+    } catch (error) {
+      // Handle timeout or network errors
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        setError('⏱️ Server is taking too long to respond. The backend might be starting up (can take 50+ seconds on free hosting). Please wait and try again.');
+      } else if (error.message.includes('Network Error')) {
+        setError('🌐 Cannot connect to server. Please check if backend is running or wait for it to wake up.');
+      } else {
+        setError(error.response?.data?.message || 'Login failed. Please try again.');
+      }
       setIsLoading(false);
     }
   };
