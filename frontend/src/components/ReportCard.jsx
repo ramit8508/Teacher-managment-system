@@ -215,6 +215,14 @@ const ReportCard = ({ student, exams, onClose, hidePrintButton = false, classFil
             <div>{classFilter || student.className || 'N/A'}</div>
           </div>
           <div className="info-row">
+            <div className="info-label">Phone Number:</div>
+            <div>{student.phone || 'N/A'}</div>
+          </div>
+          <div className="info-row">
+            <div className="info-label">Email:</div>
+            <div>{student.email || 'N/A'}</div>
+          </div>
+          <div className="info-row">
             <div className="info-label">Father's Name:</div>
             <div>{student.fatherName || 'N/A'}</div>
           </div>

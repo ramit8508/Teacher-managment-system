@@ -356,7 +356,7 @@ const AdminStudents = () => {
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Phone Number</p>
-                      <p className="font-medium">{selectedStudent.phoneNumber || 'N/A'}</p>
+                      <p className="font-medium">{selectedStudent.phone || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Roll Number</p>

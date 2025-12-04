@@ -19,7 +19,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, email, fullName, password, role, phone, address, subject, classId, className } = req.body;
+  const { username, email, fullName, password, role, phone, address, subject, classId, className, rollNo, fatherName, motherName } = req.body;
 
   // Validation
   if ([username, email, fullName, password].some((field) => field?.trim() === "")) {
@@ -57,6 +57,9 @@ const registerUser = asyncHandler(async (req, res) => {
     subject: subject || "",
     classId: classId || null,
     className: className ? className.trim().toUpperCase() : "", // Normalize to uppercase (1a -> 1A)
+    rollNo: rollNo || "",
+    fatherName: fatherName || "",
+    motherName: motherName || "",
     createdBy: createdBy
   });
 
@@ -367,6 +370,9 @@ const bulkRegisterUsers = asyncHandler(async (req, res) => {
         address: student.address || '',
         className: student.className ? student.className.trim().toUpperCase() : '', // Normalize to uppercase
         classId: student.classId || null,
+        rollNo: student.rollNo || '',
+        fatherName: student.fatherName || '',
+        motherName: student.motherName || '',
         createdBy: req.user?._id || null
       });
 
