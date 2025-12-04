@@ -22,7 +22,10 @@ const StudentsClasses = () => {
     role: 'student',
     phone: '',
     address: '',
-    className: ''
+    className: '',
+    rollNo: '',
+    fatherName: '',
+    motherName: ''
   });
 
   const [stats, setStats] = useState({
@@ -176,7 +179,10 @@ const StudentsClasses = () => {
         role: 'student',
         phone: '',
         address: '',
-        className: ''
+        className: '',
+        rollNo: '',
+        fatherName: '',
+        motherName: ''
       });
       // Refresh data after adding student
       fetchData();
@@ -213,7 +219,10 @@ const StudentsClasses = () => {
       phone: student.phone || '',
       address: student.address || '',
       classId: student.classId || '',
-      className: student.className || ''
+      className: student.className || '',
+      rollNo: student.rollNo || '',
+      fatherName: student.fatherName || '',
+      motherName: student.motherName || ''
     });
     setShowEditModal(true);
   };
@@ -228,7 +237,10 @@ const StudentsClasses = () => {
         phone: formData.phone,
         address: formData.address,
         classId: formData.classId || null,
-        className: formData.className ? formData.className.trim().toUpperCase() : '' // Normalize to uppercase
+        className: formData.className ? formData.className.trim().toUpperCase() : '', // Normalize to uppercase
+        rollNo: formData.rollNo || '',
+        fatherName: formData.fatherName || '',
+        motherName: formData.motherName || ''
       };
 
       await authAPI.updateUser(editingStudent._id, updateData);
@@ -240,7 +252,10 @@ const StudentsClasses = () => {
         role: 'student',
         phone: '',
         address: '',
-        className: ''
+        className: '',
+        rollNo: '',
+        fatherName: '',
+        motherName: ''
       });
       fetchData();
       alert('Student updated successfully!');
@@ -391,8 +406,11 @@ const StudentsClasses = () => {
           username: username, // Add username
           password: 'Student@123', // Auto-generated password
           role: 'student',
+          rollNo: values[headers.indexOf('rollno') !== -1 ? headers.indexOf('rollno') : 2] || values[2] || '',
           phone: values[headers.indexOf('phone') !== -1 ? headers.indexOf('phone') : 3] || values[3] || '',
-          address: values[headers.indexOf('address') !== -1 ? headers.indexOf('address') : 4] || values[4] || '',
+          fatherName: values[headers.indexOf('fathername') !== -1 ? headers.indexOf('fathername') : 4] || values[4] || '',
+          motherName: values[headers.indexOf('mothername') !== -1 ? headers.indexOf('mothername') : 5] || values[5] || '',
+          address: values[headers.indexOf('address') !== -1 ? headers.indexOf('address') : 6] || values[6] || '',
           ...studentClassData // Add classId or className
         };
         students.push(student);
@@ -517,25 +535,10 @@ const StudentsClasses = () => {
       <div className="flex gap-4 mb-6">
         <button
           onClick={() => setActiveTab('Students')}
-          className={`px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors ${
-            activeTab === 'Students'
-              ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-          }`}
+          className="px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors bg-blue-100 text-blue-700 border-2 border-blue-300"
         >
           <span>👥</span>
           <span>Students</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('Classes')}
-          className={`px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors ${
-            activeTab === 'Classes'
-              ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-          }`}
-        >
-          <span>🎓</span>
-          <span>Classes</span>
         </button>
       </div>
 
@@ -640,7 +643,7 @@ const StudentsClasses = () => {
                 <button
                   onClick={() => {
                     // Generate sample CSV with predefined classes
-                    const csvContent = `name,email,phone,address,class\nJohn Doe,john@example.com,1234567890,123 Main St,1A\nJane Smith,jane@example.com,0987654321,456 Oak Ave,2B\nMike Johnson,mike@example.com,9876543210,789 Park Rd,3C`;
+                    const csvContent = `name,email,rollNo,phone,fatherName,motherName,address,class\nJohn Doe,john@example.com,101,1234567890,John Doe Sr,Jane Doe,123 Main St,1A\nJane Smith,jane@example.com,102,0987654321,Robert Smith,Mary Smith,456 Oak Ave,2B\nMike Johnson,mike@example.com,103,9876543210,David Johnson,Lisa Johnson,789 Park Rd,3C`;
                     const blob = new Blob([csvContent], { type: 'text/csv' });
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -770,6 +773,17 @@ const StudentsClasses = () => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Roll Number</label>
+                  <input
+                    type="text"
+                    name="rollNo"
+                    value={formData.rollNo}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
+                    placeholder="Enter roll number"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
                   <input
                     type="tel"
@@ -778,6 +792,28 @@ const StudentsClasses = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
                     placeholder="Enter phone number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Father's Name</label>
+                  <input
+                    type="text"
+                    name="fatherName"
+                    value={formData.fatherName}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
+                    placeholder="Enter father's name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Mother's Name</label>
+                  <input
+                    type="text"
+                    name="motherName"
+                    value={formData.motherName}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
+                    placeholder="Enter mother's name"
                   />
                 </div>
                 <div>
@@ -873,6 +909,17 @@ const StudentsClasses = () => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Roll Number</label>
+                  <input
+                    type="text"
+                    name="rollNo"
+                    value={formData.rollNo}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
+                    placeholder="Enter roll number"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
                   <input
                     type="tel"
@@ -881,6 +928,28 @@ const StudentsClasses = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
                     placeholder="Enter phone number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Father's Name</label>
+                  <input
+                    type="text"
+                    name="fatherName"
+                    value={formData.fatherName}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
+                    placeholder="Enter father's name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Mother's Name</label>
+                  <input
+                    type="text"
+                    name="motherName"
+                    value={formData.motherName}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-400 outline-none"
+                    placeholder="Enter mother's name"
                   />
                 </div>
                 <div>

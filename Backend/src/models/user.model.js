@@ -54,6 +54,18 @@ const userSchema = new Schema(
       type: String,
       default: ""
     },
+    rollNo: {
+      type: String,
+      default: ""
+    },
+    fatherName: {
+      type: String,
+      default: ""
+    },
+    motherName: {
+      type: String,
+      default: ""
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",

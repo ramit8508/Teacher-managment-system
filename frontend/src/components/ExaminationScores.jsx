@@ -9,13 +9,15 @@ const ExaminationScores = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [addMode, setAddMode] = useState('single'); // 'single' or 'all-four'
   const [selectedClass, setSelectedClass] = useState('All Classes');
+  const [selectedExamType, setSelectedExamType] = useState('All Types');
+  const [selectedYear, setSelectedYear] = useState('All Years');
   
   const [examForm, setExamForm] = useState({
     studentId: '',
     classId: '',
-    examName: '',
-    examType: 'Unit Test',
+    examType: '',
     examDate: new Date().toISOString().split('T')[0],
     remarks: ''
   });
@@ -23,6 +25,22 @@ const ExaminationScores = () => {
   const [subjects, setSubjects] = useState([
     { subjectName: '', totalMarks: 100, obtainedMarks: '', remarks: '' }
   ]);
+
+  // For all-four mode: store marks for each exam type
+  const [allFourMarks, setAllFourMarks] = useState({
+    'MST-1': {},
+    'MST-2': {},
+    'MST-3': {},
+    'Final': {}
+  });
+
+  // For all-four mode: store total marks for each exam type
+  const [examTotalMarks, setExamTotalMarks] = useState({
+    'MST-1': {},
+    'MST-2': {},
+    'MST-3': {},
+    'Final': {}
+  });
 
   useEffect(() => {
     fetchData();
@@ -116,47 +134,88 @@ const ExaminationScores = () => {
   const handleSubmitExam = async (e) => {
     e.preventDefault();
     try {
-      // Validate subjects
-      const validSubjects = subjects.filter(s => s.subjectName && s.totalMarks && s.obtainedMarks !== '');
-      if (validSubjects.length === 0) {
-        alert('Please add at least one subject with complete information');
-        return;
-      }
+      if (addMode === 'single') {
+        // Single exam submission
+        const validSubjects = subjects.filter(s => s.subjectName && s.totalMarks && s.obtainedMarks !== '');
+        if (validSubjects.length === 0) {
+          alert('Please add at least one subject with complete information');
+          return;
+        }
 
-      const examData = {
-        student: examForm.studentId,
-        classId: examForm.classId,
-        examName: examForm.examName,
-        examType: examForm.examType,
-        subjects: validSubjects.map(s => ({
-          subjectName: s.subjectName,
-          totalMarks: Number(s.totalMarks),
-          obtainedMarks: Number(s.obtainedMarks),
-          remarks: s.remarks || ''
-        })),
-        examDate: examForm.examDate,
-        remarks: examForm.remarks
-      };
+        const examData = {
+          student: examForm.studentId,
+          classId: examForm.classId,
+          examType: examForm.examType,
+          subjects: validSubjects.map(s => ({
+            subjectName: s.subjectName,
+            totalMarks: Number(s.totalMarks),
+            obtainedMarks: Number(s.obtainedMarks),
+            remarks: s.remarks || ''
+          })),
+          examDate: examForm.examDate,
+          remarks: examForm.remarks
+        };
 
-      // Check if it's an edit or create operation
-      if (examForm.id) {
-        await examinationAPI.updateExamination(examForm.id, examData);
-        alert('Examination record updated successfully!');
+        if (examForm.id) {
+          await examinationAPI.updateExamination(examForm.id, examData);
+          alert('Examination record updated successfully!');
+        } else {
+          await examinationAPI.createExamination(examData);
+          alert('Examination record added successfully!');
+        }
       } else {
-        await examinationAPI.createExamination(examData);
-        alert('Examination record added successfully!');
+        // All-four exams submission
+        const examTypes = ['MST-1', 'MST-2', 'MST-3', 'Final'];
+        let successCount = 0;
+        
+        for (const examType of examTypes) {
+          const examMarks = allFourMarks[examType];
+          const examTotals = examTotalMarks[examType];
+          const subjectsList = subjects.map(s => ({
+            subjectName: s.subjectName,
+            totalMarks: Number(examTotals[s.subjectName] || s.totalMarks),
+            obtainedMarks: Number(examMarks[s.subjectName] || 0),
+            remarks: ''
+          }));
+
+          const examData = {
+            student: examForm.studentId,
+            classId: examForm.classId,
+            examType: examType,
+            subjects: subjectsList,
+            examDate: examForm.examDate,
+            remarks: examForm.remarks
+          };
+
+          await examinationAPI.createExamination(examData);
+          successCount++;
+        }
+        
+        alert(`✅ Successfully added all ${successCount} exam records!`);
       }
       
       setShowAddModal(false);
+      setAddMode('single');
       setExamForm({
         studentId: '',
         classId: '',
-        examName: '',
-        examType: 'Unit Test',
+        examType: '',
         examDate: new Date().toISOString().split('T')[0],
         remarks: ''
       });
       setSubjects([{ subjectName: '', totalMarks: 100, obtainedMarks: '', remarks: '' }]);
+      setAllFourMarks({
+        'MST-1': {},
+        'MST-2': {},
+        'MST-3': {},
+        'Final': {}
+      });
+      setExamTotalMarks({
+        'MST-1': {},
+        'MST-2': {},
+        'MST-3': {},
+        'Final': {}
+      });
       fetchData();
     } catch (error) {
       console.error('Error saving examination:', error);
@@ -170,7 +229,6 @@ const ExaminationScores = () => {
       id: exam._id,
       studentId: exam.student?._id || '',
       classId: exam.className || exam.class?._id || '',
-      examName: exam.examName,
       examType: exam.examType,
       examDate: new Date(exam.examDate).toISOString().split('T')[0],
       remarks: exam.remarks || ''
@@ -242,14 +300,28 @@ const ExaminationScores = () => {
     }
   };
 
-  const filteredExams = selectedClass === 'All Classes'
-    ? examinations
-    : examinations.filter(exam => {
-        // Check both className (for predefined classes) and classId.name (for database classes)
-        return exam.className === selectedClass || 
-               exam.class?.name === selectedClass || 
-               exam.class?.className === selectedClass;
-      });
+  const filteredExams = examinations.filter(exam => {
+    // Filter by class
+    const classMatch = selectedClass === 'All Classes' ||
+                       exam.className === selectedClass || 
+                       exam.class?.name === selectedClass || 
+                       exam.class?.className === selectedClass;
+    
+    // Filter by exam type
+    const examTypeMatch = selectedExamType === 'All Types' ||
+                          exam.examType === selectedExamType;
+    
+    // Filter by academic year (extracted from examDate)
+    const examYear = exam.examDate ? new Date(exam.examDate).getFullYear().toString() : null;
+    const yearMatch = selectedYear === 'All Years' || examYear === selectedYear;
+    
+    return classMatch && examTypeMatch && yearMatch;
+  });
+
+  // Get unique academic years from examination dates
+  const academicYears = [...new Set(examinations.map(e => 
+    e.examDate ? new Date(e.examDate).getFullYear().toString() : null
+  ).filter(Boolean))].sort((a, b) => b - a);
 
   return (
     <div className="p-8">
@@ -274,21 +346,115 @@ const ExaminationScores = () => {
 
       {/* Filter Section */}
       <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Class</label>
-        <select 
-          value={selectedClass}
-          onChange={(e) => setSelectedClass(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
-          style={{ maxHeight: '300px', overflowY: 'auto' }}
-          size="1"
-        >
-          <option>All Classes</option>
-          {classes.map(className => (
-            <option key={className} value={className}>
-              {className}
-            </option>
-          ))}
-        </select>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Class Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Class</label>
+            <select 
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
+              style={{ maxHeight: '300px', overflowY: 'auto' }}
+              size="1"
+            >
+              <option>All Classes</option>
+              {classes.map(className => (
+                <option key={className} value={className}>
+                  {className}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Exam Type Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Exam Type</label>
+            <select 
+              value={selectedExamType}
+              onChange={(e) => setSelectedExamType(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
+            >
+              <option>All Types</option>
+              <option>MST-1</option>
+              <option>MST-2</option>
+              <option>MST-3</option>
+              <option>Final</option>
+              <option>Unit Test</option>
+              <option>Mid-term</option>
+              <option>Quarterly</option>
+              <option>Half-Yearly</option>
+              <option>Annual</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          {/* Academic Year Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Academic Year</label>
+            <select 
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
+            >
+              <option>All Years</option>
+              {academicYears.map(year => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Active Filters Display */}
+        {(selectedClass !== 'All Classes' || selectedExamType !== 'All Types' || selectedYear !== 'All Years') && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="text-sm font-medium text-gray-600">Active Filters:</span>
+            {selectedClass !== 'All Classes' && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                Class: {selectedClass}
+                <button 
+                  onClick={() => setSelectedClass('All Classes')}
+                  className="hover:bg-blue-200 rounded-full p-0.5"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+            {selectedExamType !== 'All Types' && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                Type: {selectedExamType}
+                <button 
+                  onClick={() => setSelectedExamType('All Types')}
+                  className="hover:bg-green-200 rounded-full p-0.5"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+            {selectedYear !== 'All Years' && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                Year: {selectedYear}
+                <button 
+                  onClick={() => setSelectedYear('All Years')}
+                  className="hover:bg-purple-200 rounded-full p-0.5"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setSelectedClass('All Classes');
+                setSelectedExamType('All Types');
+                setSelectedYear('All Years');
+              }}
+              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 underline"
+            >
+              Clear All
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -309,7 +475,7 @@ const ExaminationScores = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Student</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Class</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Exam Name</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Year</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Exam Type</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Subjects</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Overall %</th>
@@ -333,7 +499,9 @@ const ExaminationScores = () => {
                       <td className="px-6 py-4 text-sm text-gray-700">
                         {exam.className || exam.class?.name || exam.class?.className || 'N/A'}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{exam.examName}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {exam.examDate ? new Date(exam.examDate).getFullYear() : 'N/A'}
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-700">{exam.examType}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">
                         {exam.subjects?.length || 0} subjects
@@ -396,6 +564,37 @@ const ExaminationScores = () => {
               </h2>
             </div>
             <form onSubmit={handleSubmitExam} className="p-6 max-h-[80vh] overflow-y-auto">
+              {/* Mode Selection - Only for new entries */}
+              {!examForm.id && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Entry Mode</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="addMode"
+                        value="single"
+                        checked={addMode === 'single'}
+                        onChange={(e) => setAddMode(e.target.value)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm">Single Exam (MST-1 OR MST-2 OR MST-3 OR Final)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="addMode"
+                        value="all-four"
+                        checked={addMode === 'all-four'}
+                        onChange={(e) => setAddMode(e.target.value)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm">All Four Exams (MST-1 + MST-2 + MST-3 + Final)</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
               {/* Basic Info Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
@@ -452,34 +651,24 @@ const ExaminationScores = () => {
                     <p className="text-xs text-orange-600 mt-1">Please select a class first</p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Name *</label>
-                  <input
-                    type="text"
-                    name="examName"
-                    value={examForm.examName}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
-                    placeholder="e.g., Mid-Term 2024"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Type</label>
-                  <select
-                    name="examType"
-                    value={examForm.examType}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
-                  >
-                    <option>Unit Test</option>
-                    <option>Mid-term</option>
-                    <option>Final</option>
-                    <option>Quarterly</option>
-                    <option>Half-Yearly</option>
-                    <option>Annual</option>
-                  </select>
-                </div>
+                {addMode === 'single' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Type *</label>
+                    <select
+                      name="examType"
+                      value={examForm.examType}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none"
+                    >
+                      <option value="">-- Select Exam Type --</option>
+                      <option>MST-1</option>
+                      <option>MST-2</option>
+                      <option>MST-3</option>
+                      <option>Final</option>
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Date</label>
                   <input
@@ -506,7 +695,9 @@ const ExaminationScores = () => {
               {/* Subjects Section */}
               <div className="border-t pt-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-bold text-gray-800">Subjects & Marks</h3>
+                  <h3 className="text-lg font-bold text-gray-800">
+                    {addMode === 'single' ? 'Subjects & Marks' : 'Subjects & Marks for All 4 Exams'}
+                  </h3>
                   <button
                     type="button"
                     onClick={handleAddSubject}
@@ -516,7 +707,8 @@ const ExaminationScores = () => {
                   </button>
                 </div>
 
-                {subjects.map((subject, index) => (
+                {addMode === 'single' ? (
+                  subjects.map((subject, index) => (
                   <div key={index} className="bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200">
                     <div className="flex justify-between items-center mb-3">
                       <h4 className="font-semibold text-gray-700">Subject {index + 1}</h4>
@@ -576,7 +768,165 @@ const ExaminationScores = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  // All-four mode: Show table with MST-1, MST-2, MST-3, Final columns
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-300">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th rowSpan="2" className="border border-gray-300 px-3 py-2 text-sm">Subject</th>
+                          <th colSpan="2" className="border border-gray-300 px-3 py-2 text-sm bg-blue-50">MST-1</th>
+                          <th colSpan="2" className="border border-gray-300 px-3 py-2 text-sm bg-green-50">MST-2</th>
+                          <th colSpan="2" className="border border-gray-300 px-3 py-2 text-sm bg-yellow-50">MST-3</th>
+                          <th colSpan="2" className="border border-gray-300 px-3 py-2 text-sm bg-purple-50">Final</th>
+                          <th rowSpan="2" className="border border-gray-300 px-3 py-2 text-sm">Action</th>
+                        </tr>
+                        <tr>
+                          <th className="border border-gray-300 px-2 py-1 text-xs bg-blue-50">Total</th>
+                          <th className="border border-gray-300 px-2 py-1 text-xs bg-blue-50">Obtained</th>
+                          <th className="border border-gray-300 px-2 py-1 text-xs bg-green-50">Total</th>
+                          <th className="border border-gray-300 px-2 py-1 text-xs bg-green-50">Obtained</th>
+                          <th className="border border-gray-300 px-2 py-1 text-xs bg-yellow-50">Total</th>
+                          <th className="border border-gray-300 px-2 py-1 text-xs bg-yellow-50">Obtained</th>
+                          <th className="border border-gray-300 px-2 py-1 text-xs bg-purple-50">Total</th>
+                          <th className="border border-gray-300 px-2 py-1 text-xs bg-purple-50">Obtained</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {subjects.map((subject, index) => (
+                          <tr key={index}>
+                            <td className="border border-gray-300 px-2 py-2">
+                              <input
+                                type="text"
+                                value={subject.subjectName}
+                                onChange={(e) => handleSubjectChange(index, 'subjectName', e.target.value)}
+                                required
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                placeholder="Subject"
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-2 bg-blue-50">
+                              <input
+                                type="number"
+                                value={examTotalMarks['MST-1'][subject.subjectName] || ''}
+                                onChange={(e) => {
+                                  const updated = {...examTotalMarks};
+                                  updated['MST-1'][subject.subjectName] = e.target.value;
+                                  setExamTotalMarks(updated);
+                                }}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                placeholder="100"
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-2 bg-blue-50">
+                              <input
+                                type="number"
+                                value={allFourMarks['MST-1'][subject.subjectName] || ''}
+                                onChange={(e) => {
+                                  const updated = {...allFourMarks};
+                                  updated['MST-1'][subject.subjectName] = e.target.value;
+                                  setAllFourMarks(updated);
+                                }}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-2 bg-green-50">
+                              <input
+                                type="number"
+                                value={examTotalMarks['MST-2'][subject.subjectName] || ''}
+                                onChange={(e) => {
+                                  const updated = {...examTotalMarks};
+                                  updated['MST-2'][subject.subjectName] = e.target.value;
+                                  setExamTotalMarks(updated);
+                                }}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                placeholder="100"
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-2 bg-green-50">
+                              <input
+                                type="number"
+                                value={allFourMarks['MST-2'][subject.subjectName] || ''}
+                                onChange={(e) => {
+                                  const updated = {...allFourMarks};
+                                  updated['MST-2'][subject.subjectName] = e.target.value;
+                                  setAllFourMarks(updated);
+                                }}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-2 bg-yellow-50">
+                              <input
+                                type="number"
+                                value={examTotalMarks['MST-3'][subject.subjectName] || ''}
+                                onChange={(e) => {
+                                  const updated = {...examTotalMarks};
+                                  updated['MST-3'][subject.subjectName] = e.target.value;
+                                  setExamTotalMarks(updated);
+                                }}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                placeholder="100"
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-2 bg-yellow-50">
+                              <input
+                                type="number"
+                                value={allFourMarks['MST-3'][subject.subjectName] || ''}
+                                onChange={(e) => {
+                                  const updated = {...allFourMarks};
+                                  updated['MST-3'][subject.subjectName] = e.target.value;
+                                  setAllFourMarks(updated);
+                                }}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-2 bg-purple-50">
+                              <input
+                                type="number"
+                                value={examTotalMarks['Final'][subject.subjectName] || ''}
+                                onChange={(e) => {
+                                  const updated = {...examTotalMarks};
+                                  updated['Final'][subject.subjectName] = e.target.value;
+                                  setExamTotalMarks(updated);
+                                }}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                placeholder="100"
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-2 bg-purple-50">
+                              <input
+                                type="number"
+                                value={allFourMarks['Final'][subject.subjectName] || ''}
+                                onChange={(e) => {
+                                  const updated = {...allFourMarks};
+                                  updated['Final'][subject.subjectName] = e.target.value;
+                                  setAllFourMarks(updated);
+                                }}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-2 text-center">
+                              {subjects.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveSubject(index)}
+                                  className="text-red-600 hover:text-red-800 text-sm"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-4 mt-6 border-t pt-6">

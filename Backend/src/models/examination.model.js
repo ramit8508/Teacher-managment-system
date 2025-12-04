@@ -52,12 +52,12 @@ const examinationSchema = new Schema(
     },
     examName: {
       type: String,
-      required: true,
+      required: false,
       trim: true
     },
     examType: {
       type: String,
-      enum: ["Unit Test", "Mid-term", "Final", "Quarterly", "Half-Yearly", "Annual", "Other"],
+      enum: ["MST-1", "MST-2", "MST-3", "Final", "Unit Test", "Mid-term", "Quarterly", "Half-Yearly", "Annual", "Other"],
       default: "Unit Test"
     },
     // New: Array of subjects with marks

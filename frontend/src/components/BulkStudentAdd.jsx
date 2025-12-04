@@ -14,7 +14,7 @@ const BulkStudentAdd = () => {
 
   // Manual entry state
   const [manualStudents, setManualStudents] = useState([
-    { fullName: '', email: '', className: '', phone: '', address: '' }
+    { fullName: '', email: '', rollNo: '', phone: '', fatherName: '', motherName: '', address: '', className: '' }
   ]);
 
   // Spreadsheet state
@@ -39,7 +39,7 @@ const BulkStudentAdd = () => {
   const addManualRow = () => {
     setManualStudents([
       ...manualStudents,
-      { fullName: '', email: '', className: '', phone: '', address: '' }
+      { fullName: '', email: '', rollNo: '', phone: '', fatherName: '', motherName: '', address: '', className: '' }
     ]);
   };
 
@@ -76,9 +76,12 @@ const BulkStudentAdd = () => {
         email: student.email.trim(),
         username: student.email.split('@')[0].toLowerCase(), // Auto-generate username from email
         password: 'Student@123', // Default password for all students
-        className: student.className.trim().toUpperCase(), // Normalize to uppercase (1a -> 1A)
+        rollNo: student.rollNo.trim(),
         phone: student.phone.trim(),
+        fatherName: student.fatherName.trim(),
+        motherName: student.motherName.trim(),
         address: student.address.trim(),
+        className: student.className.trim().toUpperCase(), // Normalize to uppercase (1a -> 1A)
         role: 'student'
       }));
 
@@ -92,7 +95,7 @@ const BulkStudentAdd = () => {
 
       // Reset form
       setManualStudents([
-        { fullName: '', email: '', className: '', phone: '', address: '' }
+        { fullName: '', email: '', rollNo: '', phone: '', fatherName: '', motherName: '', address: '', className: '' }
       ]);
     } catch (error) {
       console.error('Bulk add error:', error);
@@ -138,9 +141,12 @@ const BulkStudentAdd = () => {
         const formattedData = jsonData.map((row, index) => ({
           fullName: row['Name'] || row['name'] || row['Full Name'] || row['fullName'] || '',
           email: row['Email'] || row['email'] || '',
-          className: row['Class'] || row['class'] || row['className'] || '',
+          rollNo: row['Roll No'] || row['rollNo'] || row['RollNo'] || '',
           phone: row['Phone'] || row['phone'] || row['Contact'] || '',
-          address: row['Address'] || row['address'] || ''
+          fatherName: row['Father Name'] || row['fatherName'] || row['FatherName'] || '',
+          motherName: row['Mother Name'] || row['motherName'] || row['MotherName'] || '',
+          address: row['Address'] || row['address'] || '',
+          className: row['Class'] || row['class'] || row['className'] || ''
         }));
 
         setSpreadsheetData(formattedData);
@@ -155,7 +161,7 @@ const BulkStudentAdd = () => {
 
   const downloadTemplate = () => {
     // Generate sample CSV with predefined classes
-    const csvContent = `Name,Email,Class,Phone,Address\nJohn Doe,john.doe@example.com,10A,1234567890,123 Main St\nJane Smith,jane.smith@example.com,11B,0987654321,456 Oak Ave\nMike Johnson,mike.johnson@example.com,12C,9876543210,789 Park Rd`;
+    const csvContent = `Name,Email,Roll No,Phone,Father Name,Mother Name,Address,Class\nJohn Doe,john.doe@example.com,101,1234567890,Robert Doe,Mary Doe,123 Main St,10A\nJane Smith,jane.smith@example.com,102,0987654321,James Smith,Linda Smith,456 Oak Ave,11B\nMike Johnson,mike.johnson@example.com,103,9876543210,David Johnson,Sarah Johnson,789 Park Rd,12C`;
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -196,9 +202,12 @@ const BulkStudentAdd = () => {
         email: String(student.email || '').trim(),
         username: String(student.email || '').split('@')[0].toLowerCase(), // Auto-generate from email
         password: 'Student@123', // Default password for all students
-        className: String(student.className || '').trim().toUpperCase(), // Normalize to uppercase (1a -> 1A)
+        rollNo: student.rollNo ? String(student.rollNo).trim() : '',
         phone: student.phone ? String(student.phone).trim() : '',
+        fatherName: student.fatherName ? String(student.fatherName).trim() : '',
+        motherName: student.motherName ? String(student.motherName).trim() : '',
         address: student.address ? String(student.address).trim() : '',
+        className: String(student.className || '').trim().toUpperCase(), // Normalize to uppercase (1a -> 1A)
         role: 'student'
       }));
 
@@ -304,9 +313,12 @@ const BulkStudentAdd = () => {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name *</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Roll No</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Father Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mother Name</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class *</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                   </tr>
                 </thead>
@@ -332,16 +344,13 @@ const BulkStudentAdd = () => {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <select
-                          value={student.className}
-                          onChange={(e) => updateManualStudent(index, 'className', e.target.value)}
+                        <input
+                          type="text"
+                          value={student.rollNo}
+                          onChange={(e) => updateManualStudent(index, 'rollNo', e.target.value)}
                           className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 text-sm"
-                        >
-                          <option value="">Select</option>
-                          {availableClasses.map(cls => (
-                            <option key={cls} value={cls}>{cls}</option>
-                          ))}
-                        </select>
+                          placeholder="101"
+                        />
                       </td>
                       <td className="px-4 py-3">
                         <input
@@ -355,11 +364,41 @@ const BulkStudentAdd = () => {
                       <td className="px-4 py-3">
                         <input
                           type="text"
+                          value={student.fatherName}
+                          onChange={(e) => updateManualStudent(index, 'fatherName', e.target.value)}
+                          className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="Father's Name"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="text"
+                          value={student.motherName}
+                          onChange={(e) => updateManualStudent(index, 'motherName', e.target.value)}
+                          className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="Mother's Name"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="text"
                           value={student.address}
                           onChange={(e) => updateManualStudent(index, 'address', e.target.value)}
                           className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 text-sm"
                           placeholder="123 Main St"
                         />
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={student.className}
+                          onChange={(e) => updateManualStudent(index, 'className', e.target.value)}
+                          className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                        >
+                          <option value="">Select</option>
+                          {availableClasses.map(cls => (
+                            <option key={cls} value={cls}>{cls}</option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-4 py-3">
                         {manualStudents.length > 1 && (
@@ -403,7 +442,7 @@ const BulkStudentAdd = () => {
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-2">Upload Spreadsheet</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Upload an Excel or CSV file with student information. Required columns: Name, Email, Class. Optional: Phone, Address. (Password will be set to 'Student@123' for all)
+                Upload an Excel or CSV file with student information. Required columns: Name, Email, Roll No, Phone, Father Name, Mother Name, Address, Class. (Password will be set to 'Student@123' for all)
               </p>
               
               <button

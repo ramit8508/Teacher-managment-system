@@ -13,7 +13,6 @@ import Attendance from '../components/Attendance';
 import FeeDetails from '../components/FeeDetails';
 import ExaminationScores from '../components/ExaminationScores';
 import BulkFeeManagement from '../components/BulkFeeManagement';
-import BulkExamEditor from '../components/BulkExamEditor';
 import ClassPromotion from '../components/ClassPromotion';
 import ChangePassword from '../components/ChangePassword';
 import ManageClasses from '../components/ManageClasses';
@@ -43,8 +42,6 @@ const Dashboard = ({ onLogout }) => {
           return <ClassTeacherAssignment />;
         case 'Bulk Fee Management':
           return <BulkFeeManagement />;
-        case 'Bulk Exam Editor':
-          return <BulkExamEditor />;
         case 'Class Promotion':
           return <ClassPromotion />;
         case 'Change Password':
@@ -72,8 +69,6 @@ const Dashboard = ({ onLogout }) => {
         return <ExaminationScores />;
       case 'Bulk Fee Management':
         return <BulkFeeManagement />;
-      case 'Bulk Exam Editor':
-        return <BulkExamEditor />;
       case 'Class Promotion':
         return <ClassPromotion />;
       case 'Change Password':

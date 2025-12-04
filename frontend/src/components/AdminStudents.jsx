@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { authAPI, classAPI, feeAPI, examinationAPI } from '../api';
+import ReportCard from './ReportCard';
 
 const AdminStudents = () => {
   const [students, setStudents] = useState([]);
@@ -8,9 +9,16 @@ const AdminStudents = () => {
   const [classFilter, setClassFilter] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showReportCard, setShowReportCard] = useState(false);
+  const [showReportFilterModal, setShowReportFilterModal] = useState(false);
+  const [reportFilters, setReportFilters] = useState({ className: '', academicYear: '' });
+  const [showBulkReportModal, setShowBulkReportModal] = useState(false);
+  const [selectedClassForReport, setSelectedClassForReport] = useState('');
+  const [selectedYearForReport, setSelectedYearForReport] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [studentDetails, setStudentDetails] = useState(null);
+  const [filteredExams, setFilteredExams] = useState([]);
 
   useEffect(() => {
     fetchStudents();
@@ -161,9 +169,17 @@ const AdminStudents = () => {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Manage Students</h1>
-        <p className="text-sm sm:text-base text-gray-600">View, edit, and manage student records</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Manage Students</h1>
+          <p className="text-sm sm:text-base text-gray-600">View, edit, and manage student records</p>
+        </div>
+        <button
+          onClick={() => setShowBulkReportModal(true)}
+          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-2"
+        >
+          🖨️ Print Class Reports
+        </button>
       </div>
 
       {/* Search and Filter */}
@@ -428,12 +444,26 @@ const AdminStudents = () => {
               </div>
             )}
 
-            <button
-              onClick={() => setShowDetailsModal(false)}
-              className="w-full mt-6 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-            >
-              Close
-            </button>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowReportFilterModal(true);
+                }}
+                disabled={!studentDetails?.exams || studentDetails.exams.length === 0}
+                className="flex-1 bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                👁️ Review Report Card
+              </button>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+              >
+                Close
+              </button>
+            </div>
+            {!studentDetails?.exams || studentDetails.exams.length === 0 ? (
+              <p className="text-sm text-orange-600 mt-2 text-center">⚠️ No exam records available for this student</p>
+            ) : null}
           </div>
         </div>
       )}
@@ -485,6 +515,323 @@ const AdminStudents = () => {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Filter Modal */}
+      {showReportFilterModal && selectedStudent && studentDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Select Report Card Filters</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Class</label>
+                <select
+                  value={reportFilters.className}
+                  onChange={(e) => setReportFilters({...reportFilters, className: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">All Classes</option>
+                  {[...new Set(studentDetails.exams.map(e => e.className).filter(Boolean))].sort((a, b) => {
+                    const matchA = a.match(/^(\d+)([A-Z]+)$/);
+                    const matchB = b.match(/^(\d+)([A-Z]+)$/);
+                    if (matchA && matchB) {
+                      const gradeA = parseInt(matchA[1], 10);
+                      const gradeB = parseInt(matchB[1], 10);
+                      if (gradeA !== gradeB) return gradeA - gradeB;
+                      return matchA[2].localeCompare(matchB[2]);
+                    }
+                    return a.localeCompare(b);
+                  }).map(className => (
+                    <option key={className} value={className}>{className}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
+                <select
+                  value={reportFilters.academicYear}
+                  onChange={(e) => setReportFilters({...reportFilters, academicYear: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">All Years</option>
+                  {[...new Set(studentDetails.exams.map(e => new Date(e.examDate).getFullYear()).filter(Boolean))].sort((a, b) => b - a).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    // Filter exams based on selected class and year
+                    let filtered = studentDetails.exams;
+                    if (reportFilters.className) {
+                      filtered = filtered.filter(e => e.className === reportFilters.className);
+                    }
+                    if (reportFilters.academicYear) {
+                      filtered = filtered.filter(e => new Date(e.examDate).getFullYear() === parseInt(reportFilters.academicYear));
+                    }
+                    setFilteredExams(filtered);
+                    setShowReportFilterModal(false);
+                    setShowReportCard(true);
+                  }}
+                  className="flex-1 bg-green-600 text-white py-2 rounded-md hover:bg-green-700"
+                >
+                  Generate Report
+                </button>
+                <button
+                  onClick={() => {
+                    setShowReportFilterModal(false);
+                    setReportFilters({ className: '', academicYear: '' });
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-md hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Report Card Modal */}
+      {showReportCard && selectedStudent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full my-8 mx-4 max-h-[95vh] overflow-y-auto">
+            <ReportCard 
+              student={selectedStudent} 
+              exams={filteredExams}
+              onClose={() => {
+                setShowReportCard(false);
+                setReportFilters({ className: '', academicYear: '' });
+                setFilteredExams([]);
+              }}
+              classFilter={reportFilters.className}
+              yearFilter={reportFilters.academicYear}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Report Card Modal */}
+      {showBulkReportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Print Class Report Cards</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Class</label>
+                <select
+                  value={selectedClassForReport}
+                  onChange={(e) => setSelectedClassForReport(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">-- Select Class --</option>
+                  {[...new Set(students.map(s => s.className || s.classId?.name).filter(Boolean))].sort((a, b) => {
+                    const matchA = a.match(/^(\d+)([A-Z]+)$/);
+                    const matchB = b.match(/^(\d+)([A-Z]+)$/);
+                    if (matchA && matchB) {
+                      const gradeA = parseInt(matchA[1], 10);
+                      const gradeB = parseInt(matchB[1], 10);
+                      if (gradeA !== gradeB) return gradeA - gradeB;
+                      return matchA[2].localeCompare(matchB[2]);
+                    }
+                    return a.localeCompare(b);
+                  }).map(className => (
+                    <option key={className} value={className}>{className}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Academic Year</label>
+                <select
+                  value={selectedYearForReport}
+                  onChange={(e) => setSelectedYearForReport(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">-- Select Year --</option>
+                  <option value="2024">2024</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                </select>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    if (!selectedClassForReport) {
+                      alert('Please select a class');
+                      return;
+                    }
+                    if (!selectedYearForReport) {
+                      alert('Please select an academic year');
+                      return;
+                    }
+                    
+                    // Filter students by class
+                    const classStudents = students.filter(s => 
+                      (s.className || s.classId?.name) === selectedClassForReport
+                    );
+                    
+                    if (classStudents.length === 0) {
+                      alert('No students found in this class');
+                      return;
+                    }
+
+                    // Create print window
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                      <html>
+                        <head>
+                          <title>Class Report Cards - ${selectedClassForReport}</title>
+                          <script src="https://cdn.tailwindcss.com"></script>
+                          <style>
+                            body {
+                              margin: 0;
+                              padding: 0;
+                            }
+                            .print-button-container {
+                              position: fixed;
+                              top: 20px;
+                              right: 20px;
+                              z-index: 1000;
+                              display: flex;
+                              gap: 10px;
+                              background: white;
+                              padding: 10px;
+                              border-radius: 8px;
+                              box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                            }
+                            .print-btn {
+                              padding: 12px 24px;
+                              font-size: 16px;
+                              font-weight: 600;
+                              border: none;
+                              border-radius: 8px;
+                              cursor: pointer;
+                              box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                            }
+                            .print-btn-primary {
+                              background-color: #2563eb;
+                              color: white;
+                            }
+                            .print-btn-primary:hover {
+                              background-color: #1d4ed8;
+                            }
+                            .report-card-wrapper {
+                              page-break-after: auto;
+                              page-break-inside: avoid;
+                              margin-bottom: 20px;
+                            }
+                            @media print {
+                              .print-button-container {
+                                display: none !important;
+                              }
+                              .report-card-container {
+                                position: relative !important;
+                                visibility: visible !important;
+                              }
+                              .page-break {
+                                page-break-after: always;
+                              }
+                              @page {
+                                size: A4;
+                                margin: 0;
+                              }
+                              body * {
+                                visibility: visible !important;
+                              }
+                            }
+                          </style>
+                        </head>
+                        <body>
+                          <div class="print-button-container">
+                            <button class="print-btn print-btn-primary" onclick="window.print()" disabled style="opacity: 0.6;">
+                              🖨️ Print / Save as PDF
+                            </button>
+                            <p style="color: #666; font-size: 14px; margin-top: 8px;">Loading report cards...</p>
+                          </div>
+                          <div id="print-content"></div>
+                        </body>
+                      </html>
+                    `);
+
+                    // Fetch all student data
+                    const studentReports = [];
+                    for (const student of classStudents) {
+                      const examsRes = await examinationAPI.getAllExaminations();
+                      let studentExams = examsRes.data.data?.filter(e => e.student?._id === student._id) || [];
+                      
+                      // Filter by selected year
+                      studentExams = studentExams.filter(e => {
+                        const examYear = e.examDate ? new Date(e.examDate).getFullYear().toString() : null;
+                        return examYear === selectedYearForReport;
+                      });
+                      
+                      studentReports.push({ student, exams: studentExams });
+                    }
+
+                    // Render all report cards in one document
+                    printWindow.document.close();
+                    
+                    import('react-dom/client').then(({ createRoot }) => {
+                      const container = printWindow.document.getElementById('print-content');
+                      const root = createRoot(container);
+                      
+                      root.render(
+                        <>
+                          {studentReports.map((report, index) => (
+                            <div key={report.student._id} className="report-card-wrapper">
+                              <ReportCard 
+                                student={report.student} 
+                                exams={report.exams} 
+                                onClose={() => {}} 
+                                hidePrintButton={true}
+                                classFilter={selectedClassForReport}
+                                yearFilter={selectedYearForReport}
+                              />
+                            </div>
+                          ))}
+                        </>
+                      );
+                      
+                      // Ensure all content is rendered before making print button functional
+                      setTimeout(() => {
+                        const printBtn = printWindow.document.querySelector('.print-btn-primary');
+                        const loadingText = printWindow.document.querySelector('.print-button-container p');
+                        if (printBtn) {
+                          printBtn.disabled = false;
+                          printBtn.style.opacity = '1';
+                        }
+                        if (loadingText) {
+                          loadingText.textContent = 'Ready to print!';
+                          loadingText.style.color = '#16a34a';
+                        }
+                      }, 1500);
+                    });
+                    
+                    setShowBulkReportModal(false);
+                    setSelectedClassForReport('');
+                    setSelectedYearForReport('');
+                  }}
+                  disabled={!selectedClassForReport || !selectedYearForReport}
+                  className="flex-1 bg-green-600 text-white py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  🖨️ Print All
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBulkReportModal(false);
+                    setSelectedClassForReport('');
+                    setSelectedYearForReport('');
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-md hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

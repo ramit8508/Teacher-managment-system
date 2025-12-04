@@ -18,15 +18,14 @@ const Sidebar = ({ onMenuChange, onLogout, isOpen, setIsOpen }) => {
     { id: 4, name: 'Fee Details', icon: '💰', roles: ['teacher'], superAdminOnly: false },
     { id: 5, name: 'Examination Scores', icon: '📊', roles: ['teacher'], superAdminOnly: false },
     { id: 6, name: 'Bulk Fee Management', icon: '💵', roles: ['teacher', 'admin'], superAdminOnly: false },
-    { id: 7, name: 'Bulk Exam Editor', icon: '📝', roles: ['teacher', 'admin'], superAdminOnly: false },
-    { id: 8, name: 'Class Promotion', icon: '🎓', roles: ['teacher', 'admin'], superAdminOnly: false },
-    { id: 9, name: 'Manage Teachers', icon: '👨‍🏫', roles: ['admin'], superAdminOnly: false },
-    { id: 10, name: 'Manage Students', icon: '👥', roles: ['admin'], superAdminOnly: false },
-    { id: 11, name: 'Manage Classes', icon: '📚', roles: ['admin'], superAdminOnly: false },
-    { id: 12, name: 'Class-Teacher Assignment', icon: '🔗', roles: ['admin'], superAdminOnly: false },
-    { id: 13, name: 'Change Password', icon: '🔐', roles: ['teacher', 'admin'], superAdminOnly: false },
-    { id: 14, name: 'Manage Admins', icon: '👑', roles: ['admin'], superAdminOnly: true },
-    { id: 15, name: 'Bulk Add Students', icon: '📥', roles: ['admin'], superAdminOnly: true },
+    { id: 7, name: 'Class Promotion', icon: '🎓', roles: ['teacher', 'admin'], superAdminOnly: false },
+    { id: 8, name: 'Manage Teachers', icon: '👨‍🏫', roles: ['admin'], superAdminOnly: false },
+    { id: 9, name: 'Manage Students', icon: '👥', roles: ['admin'], superAdminOnly: false },
+    { id: 10, name: 'Manage Classes', icon: '📚', roles: ['admin'], superAdminOnly: false },
+    { id: 11, name: 'Class-Teacher Assignment', icon: '🔗', roles: ['admin'], superAdminOnly: false },
+    { id: 12, name: 'Change Password', icon: '🔐', roles: ['teacher', 'admin'], superAdminOnly: false },
+    { id: 13, name: 'Manage Admins', icon: '👑', roles: ['admin'], superAdminOnly: true },
+    { id: 14, name: 'Bulk Add Students', icon: '📥', roles: ['admin'], superAdminOnly: true },
   ];
 
   // Filter menu items based on user role and super admin status
